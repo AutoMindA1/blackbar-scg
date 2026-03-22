@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlackBar — For Lane Swainston</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: #f0ece4;
+      color: #1a1a1a;
+      line-height: 1.75;
+    }
+
+    /* ─── HERO HEADER ───────────────────────────────────────── */
+    .hero {
+      background: #0a0a0a;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 3px solid #c9a84c;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle at 20% 50%, rgba(201,168,76,0.06) 0%, transparent 60%),
+                        radial-gradient(circle at 80% 20%, rgba(201,168,76,0.04) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      max-width: 940px;
+      margin: 0 auto;
+      padding: 0 48px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 300px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-brand {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 52px 48px 52px 0;
+      border-right: 1px solid rgba(201,168,76,0.25);
+    }
+
+    .brand-wordmark {
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-family: 'Georgia', serif;
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: #e8dcc8;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .brand-rule {
+      width: 100%;
+      height: 1px;
+      background: #c9a84c;
+      margin: 6px 0;
+    }
+
+    .brand-tagline {
+      font-family: 'Georgia', serif;
+      font-size: 13px;
+      letter-spacing: 5px;
+      color: #c9a84c;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .hero-contact {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 52px 0 52px 48px;
+    }
+
+    .scg-wordmark {
+      font-family: 'Georgia', serif;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #e8dcc8;
+      text-transform: uppercase;
+      line-height: 1.1;
+      border-bottom: 1px solid #c9a84c;
+      padding-bottom: 8px;
+      margin-bottom: 14px;
+    }
+
+    .scg-wordmark span {
+      display: block;
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: #a09070;
+      font-weight: 400;
+    }
+
+    .contact-name {
+      font-family: 'Georgia', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #e8dcc8;
+      margin-bottom: 2px;
+    }
+
+    .contact-title {
+      font-size: 13px;
+      color: #a09070;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      font-style: italic;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 16px;
+      font-family: 'Arial', sans-serif;
+      font-size: 12.5px;
+    }
+
+    .contact-grid .label { color: #7a6a50; text-align: right; letter-spacing: 0.5px; }
+    .contact-grid .value { color: #c8baa0; }
+
+    /* ─── BRIEF BANNER ──────────────────────────────────────── */
+    .brief-banner {
+      background: #c9a84c;
+      text-align: center;
+      padding: 10px 24px;
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #0a0a0a;
+    }
+
+    /* ─── PROGRESS BAR ───────────────────────────────────────── */
+    .progress-bar-section {
+      background: #fff;
+      border-bottom: 1px solid #d8d0c4;
+      padding: 28px 48px;
+    }
+
+    .progress-bar-inner {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .progress-label {
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #9a7a3a;
+      margin-bottom: 16px;
+    }
+
+    .phase-track {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+      gap: 6px;
+    }
+
+    .phase-item {
+      text-align: center;
+    }
+
+    .phase-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: #d8d0c4;
+      margin-bottom: 8px;
+    }
+
+    .phase-bar.done { background: #0a0a0a; }
+    .phase-bar.active { background: #c9a84c; }
+
+    .phase-name {
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #999;
+    }
+
+    .phase-name.done { color: #0a0a0a; }
+    .phase-name.active { color: #9a7a3a; }
+
+    .phase-status {
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      color: #bbb;
+      margin-top: 2px;
+    }
+
+    .phase-status.done { color: #555; }
+    .phase-status.active { color: #c9a84c; font-weight: 700; }
+
+    /* ─── SECTIONS ───────────────────────────────────────────── */
+    .section {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 52px 48px;
+      border-bottom: 1px solid #d8d0c4;
+    }
+
+    .section:last-of-type { border-bottom: none; }
+
+    .section-label {
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3.5px;
+      text-transform: uppercase;
+      color: #9a7a3a;
+      margin-bottom: 10px;
+    }
+
+    .section h2 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #0a0a0a;
+      margin-bottom: 20px;
+      line-height: 1.25;
+    }
+
+    .section p {
+      font-size: 16px;
+      margin-bottom: 16px;
+      color: #2c2c2c;
+    }
+
+    .section p:last-child { margin-bottom: 0; }
+
+    /* ─── PULL QUOTE ─────────────────────────────────────────── */
+    .pull-quote {
+      background: #0a0a0a;
+      color: #e8dcc8;
+      border-left: 5px solid #c9a84c;
+      padding: 24px 28px;
+      margin: 28px 0;
+      font-size: 17px;
+      font-style: italic;
+      line-height: 1.6;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .pull-quote cite {
+      display: block;
+      font-style: normal;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #c9a84c;
+      margin-top: 10px;
+    }
+
+    /* ─── EXPLAINER GRID ─────────────────────────────────────── */
+    .explainer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 28px;
+    }
+
+    .explainer-card {
+      background: #fff;
+      border: 1px solid #d8d0c4;
+      border-top: 3px solid #0a0a0a;
+      padding: 24px 22px;
+      border-radius: 0 0 4px 4px;
+    }
+
+    .explainer-card.built {
+      border-top-color: #c9a84c;
+      background: #fdf8ec;
+    }
+
+    .explainer-card .card-icon { font-size: 22px; margin-bottom: 10px; }
+
+    .explainer-card h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0a0a0a;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .explainer-card p { font-size: 14.5px; color: #333; margin-bottom: 0; }
+
+    .built-badge {
+      display: inline-block;
+      background: #0a0a0a;
+      color: #c9a84c;
+      font-family: 'Arial', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    /* ─── DELIVERABLE LIST ───────────────────────────────────── */
+    .deliverable-list { margin-top: 24px; list-style: none; }
+
+    .deliverable-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      padding: 20px 0;
+      border-bottom: 1px solid #d8d0c4;
+    }
+
+    .deliverable-list li:last-child { border-bottom: none; }
+
+    .del-number {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-family: 'Arial', sans-serif;
+      font-size: 14px;
+      margin-top: 2px;
+    }
+
+    .del-number.done {
+      background: #c9a84c;
+      color: #0a0a0a;
+    }
+
+    .del-number.pending {
+      background: #0a0a0a;
+      color: #c9a84c;
+    }
+
+    .del-content h4 { font-size: 15px; font-weight: 700; color: #0a0a0a; margin-bottom: 4px; }
+    .del-content p { font-size: 14.5px; color: #444; margin-bottom: 0; }
+
+    .status-tag {
+      display: inline-block;
+      font-family: 'Arial', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .status-tag.complete {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+    }
+
+    .status-tag.pending {
+      background: #fff8e1;
+      color: #f57f17;
+      border: 1px solid #ffe082;
+    }
+
+    /* ─── ASK CARDS ──────────────────────────────────────────── */
+    .ask-card {
+      background: #fff;
+      border: 1px solid #d8d0c4;
+      border-left: 5px solid #c9a84c;
+      padding: 26px 24px;
+      margin-top: 22px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .ask-card.done {
+      border-left-color: #a5d6a7;
+      background: #f9fdf9;
+      opacity: 0.8;
+    }
+
+    .ask-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .ask-card h3 { font-size: 16px; font-weight: 700; color: #0a0a0a; }
+    .ask-card.done h3 { color: #555; text-decoration: line-through; text-decoration-color: #a5d6a7; }
+
+    .time-badge {
+      background: #0a0a0a;
+      color: #c9a84c;
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .done-badge {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .ask-card p { font-size: 14.5px; color: #444; margin-bottom: 10px; }
+    .ask-card ul { padding-left: 18px; color: #444; font-size: 14.5px; }
+    .ask-card ul li { margin-bottom: 5px; }
+
+    .ask-card .example-text {
+      font-style: italic;
+      font-size: 13.5px;
+      color: #666;
+      background: #f9f7f2;
+      border-left: 3px solid #d8d0c4;
+      padding: 10px 14px;
+      margin-top: 12px;
+    }
+
+    .ask-card .completed-note {
+      font-style: italic;
+      font-size: 13.5px;
+      color: #2e7d32;
+      background: #f1f8f1;
+      border-left: 3px solid #a5d6a7;
+      padding: 10px 14px;
+      margin-top: 12px;
+    }
+
+    /* ─── VOICE.MD BOX ───────────────────────────────────────── */
+    .voicemd-box {
+      background: #fdf8ec;
+      border: 2px solid #c9a84c;
+      padding: 28px 26px;
+      margin-top: 28px;
+      border-radius: 4px;
+    }
+
+    .voicemd-box h3 { font-size: 16px; font-weight: 700; color: #0a0a0a; margin-bottom: 10px; }
+    .voicemd-box p { font-size: 14.5px; color: #444; margin-bottom: 10px; }
+    .voicemd-box p:last-child { margin-bottom: 0; }
+
+    .voicemd-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .voicemd-stat {
+      background: #0a0a0a;
+      border-radius: 4px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .voicemd-stat .stat-number {
+      font-family: 'Georgia', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #c9a84c;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .voicemd-stat .stat-label {
+      font-family: 'Arial', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #7a6a50;
+    }
+
+    /* ─── TIMELINE ───────────────────────────────────────────── */
+    .timeline { margin-top: 28px; }
+
+    .timeline-item {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+
+    .timeline-week {
+      flex-shrink: 0;
+      width: 72px;
+      text-align: right;
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #999;
+      padding-top: 2px;
+    }
+
+    .timeline-week.done { color: #555; }
+    .timeline-week.active { color: #9a7a3a; }
+
+    .timeline-dot {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #d8d0c4;
+      margin-top: 4px;
+    }
+
+    .timeline-dot.done { background: #0a0a0a; }
+    .timeline-dot.active { background: #c9a84c; }
+
+    .timeline-content h4 { font-size: 15px; font-weight: 700; color: #0a0a0a; margin-bottom: 3px; }
+    .timeline-content h4.done-text { color: #888; text-decoration: line-through; text-decoration-color: #bbb; }
+    .timeline-content p { font-size: 14px; color: #555; margin-bottom: 0; }
+
+    /* ─── FOOTER ─────────────────────────────────────────────── */
+    .page-footer {
+      background: #0a0a0a;
+      color: #5a5040;
+      text-align: center;
+      padding: 28px;
+      font-family: 'Arial', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      border-top: 3px solid #c9a84c;
+    }
+
+    .page-footer .footer-brand {
+      font-size: 15px;
+      letter-spacing: 4px;
+      color: #c9a84c;
+      font-family: 'Georgia', serif;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .page-footer .footer-rule {
+      width: 40px;
+      height: 1px;
+      background: #c9a84c;
+      margin: 8px auto;
+    }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────────── */
+    @media (max-width: 680px) {
+      .hero-inner { grid-template-columns: 1fr; min-height: auto; }
+      .hero-brand { padding: 36px 0 28px; border-right: none; border-bottom: 1px solid rgba(201,168,76,0.25); }
+      .hero-contact { padding: 28px 0 36px; }
+      .progress-bar-section { padding: 24px; }
+      .section { padding: 36px 24px; }
+      .explainer-grid { grid-template-columns: 1fr; }
+      .brand-name { font-size: 32px; }
+      .phase-track { grid-template-columns: 1fr 1fr 1fr; }
+      .voicemd-stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── HERO HEADER ─────────────────────────────────────────── -->
+<header class="hero">
+  <div class="hero-inner">
+
+    <div class="hero-brand">
+      <div class="brand-wordmark">
+        <div class="brand-name">BlackBar</div>
+        <div class="brand-rule"></div>
+        <div class="brand-tagline">Savage Wins</div>
+      </div>
+    </div>
+
+    <div class="hero-contact">
+      <div class="scg-wordmark">
+        Swainston
+        <span>Consulting Group</span>
+      </div>
+      <div class="contact-name">Lane Swainston</div>
+      <div class="contact-title">CBO, CXLT, TCDS &mdash; Principal Consultant</div>
+      <div class="contact-grid">
+        <span class="label">Telephone:</span><span class="value">702.434.9576</span>
+        <span class="label">Facsimile:</span><span class="value">702.435.1888</span>
+        <span class="label">E-mail:</span><span class="value">lane@swainston.com</span>
+        <span class="label">Web:</span><span class="value">www.swainston.com</span>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+<!-- ─── BANNER ────────────────────────────────────────────────── -->
+<div class="brief-banner">Phase 3 Kickoff &mdash; Foundation Complete &bull; System Built &bull; Ready for First Live Test</div>
+
+<!-- ─── PROGRESS TRACK ────────────────────────────────────────── -->
+<div class="progress-bar-section">
+  <div class="progress-bar-inner">
+    <div class="progress-label">Project Status &mdash; 21 March 2026</div>
+    <div class="phase-track">
+      <div class="phase-item">
+        <div class="phase-bar done"></div>
+        <div class="phase-name done">Voice Analysis</div>
+        <div class="phase-status done">Complete</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-bar done"></div>
+        <div class="phase-name done">Benchmarks</div>
+        <div class="phase-status done">3 Filed &bull; Locked</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-bar done"></div>
+        <div class="phase-name done">Agent System</div>
+        <div class="phase-status done">4 Agents Built</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-bar active"></div>
+        <div class="phase-name active">Live Test</div>
+        <div class="phase-status active">&#9654; Now</div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-bar"></div>
+        <div class="phase-name">Production</div>
+        <div class="phase-status">Pending</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SECTION 1: WHERE WE ARE ──────────────────────────────── -->
+<section class="section">
+  <div class="section-label">Where We Are</div>
+  <h2>The system is built. Your voice is in it. We're ready to run a real case.</h2>
+
+  <p>When we started, the goal was simple: stop making you write the same 60% of every report from scratch. The structure. The boilerplate. The date format. The section headers. The CXLT registry check. The conclusion paragraph. All of that is fixed-form language that BlackBar should be producing &mdash; not you.</p>
+
+  <p>To get there, we read through your filed reports across every major case type: slips, trips, stairs, supplementals, rebuttals. We extracted your section structure, your boilerplate blocks verbatim, your date format, your rebuttal architecture, your figure caption style, your institutional "SCG" voice, and every analytical pattern you've developed over 30 years &mdash; the credential attack sequence, the code edition-in-force methodology, the surveillance video four-question framework, the omission attack against opposing experts who never visited the site.</p>
+
+  <p>We then asked Mariz to pick your three best recent reports as the benchmark standard. She came back with Gleason, Heagy, and Anderson &mdash; your most current work. We read all three cover to cover and updated everything accordingly.</p>
+
+  <div class="pull-quote">
+    "The benchmark test: does this read like Gleason, Heagy, or Anderson? Those are the three canonical files. When in doubt, match their rhythm, precision, and institutional tone."
+    <cite>&mdash; VOICE.md v2.0, the governing document for every BlackBar draft</cite>
+  </div>
+
+  <p>The result is VOICE.md version 2.0 &mdash; a 20-section behavioral profile governing every word the drafting agent produces. And a four-agent pipeline purpose-built around how SCG actually works. The system is done. What comes next is running it against a real matter so you can tell us where it's right and where it needs you.</p>
+</section>
+
+<!-- ─── SECTION 2: THE SYSTEM ──────────────────────────────────── -->
+<section class="section">
+  <div class="section-label">How It Works</div>
+  <h2>Four agents. Built. Each one knows its job.</h2>
+
+  <p>You give BlackBar a matter &mdash; the attorney, the case caption, the incident facts, the report type, the documents in hand. Four agents take it from there and hand you back a reviewable draft.</p>
+
+  <div class="explainer-grid">
+    <div class="explainer-card built">
+      <div class="built-badge">&#10003; Built</div>
+      <div class="card-icon">&#128203;</div>
+      <h3>1. Intake Agent</h3>
+      <p>Accepts the matter in any format &mdash; forwarded email, voice memo, bullet list. Normalizes everything into a structured brief. Flags missing fields. Won't hand off until the case is complete.</p>
+    </div>
+    <div class="explainer-card built">
+      <div class="built-badge">&#10003; Built</div>
+      <div class="card-icon">&#128269;</div>
+      <h3>2. Research Agent</h3>
+      <p>Resolves every research flag from intake: CXLT Registry status for opposing experts, code edition in force as of the permit date, the full Peterson playbook if Peterson appears, boilerplate block selection, section plan.</p>
+    </div>
+    <div class="explainer-card built">
+      <div class="built-badge">&#10003; Built</div>
+      <div class="card-icon">&#9997;&#65039;</div>
+      <h3>3. Drafting Agent</h3>
+      <p>Builds the full report in your voice against VOICE.md. Inserts boilerplate verbatim &mdash; no paraphrasing, no "improvement." Uses Gleason, Heagy, or Anderson as the benchmark depending on report type.</p>
+    </div>
+    <div class="explainer-card built">
+      <div class="built-badge">&#10003; Built</div>
+      <div class="card-icon">&#9989;</div>
+      <h3>4. QA Agent</h3>
+      <p>Runs 10 specific checks before you see the draft: date format, "SCG" not "I," "alleged" language, boilerplate integrity, conclusion verbatim, benchmark comparison by section. Scores each section Pass / Review / Fail.</p>
+    </div>
+  </div>
+
+  <p style="margin-top:28px;">Three explicit checkpoints before anything is finalized: after intake (confirm the matter is set up correctly), after the research summary (confirm facts are accurate), and after the draft (review and approve or redline). Nothing is saved as final without your signoff.</p>
+</section>
+
+<!-- ─── SECTION 3: WHAT'S BEEN DONE ──────────────────────────── -->
+<section class="section">
+  <div class="section-label">The Deliverables &mdash; Status</div>
+  <h2>Three of five deliverables are complete. Two require a live case.</h2>
+
+  <ul class="deliverable-list">
+    <li>
+      <div class="del-number done">&#10003;</div>
+      <div class="del-content">
+        <div class="status-tag complete">Complete</div>
+        <h4>VOICE.md v2.0 &mdash; Your Voice, Verified Against Your Best Work</h4>
+        <p>Built from 9+ filed reports, then updated against Gleason, Heagy, and Anderson. 20 sections covering: identity and attribution rules, date format, case naming, section headers, documentation format, rebuttal structure, 11 verbatim boilerplate blocks, ANSI A326.3 and DCOF threshold analysis, figure caption format, paragraph style, 10 analytical attack patterns, the John Peterson adversary playbook, and the benchmark case registry. This is the governing document. Every draft BlackBar produces is measured against it.</p>
+      </div>
+    </li>
+    <li>
+      <div class="del-number done">&#10003;</div>
+      <div class="del-content">
+        <div class="status-tag complete">Complete</div>
+        <h4>Three Benchmark Cases &mdash; Registered and Locked</h4>
+        <p>Gleason (2 February 2026 &mdash; Initial Report), Heagy (23 January 2026 &mdash; Rebuttal Report), and Anderson (2 December 2025 &mdash; Supplemental Report). These are now stored in the BlackBar system and the QA Agent compares every draft against the relevant benchmark before you see it. You identified these as your best current work. The system treats them as the standard.</p>
+      </div>
+    </li>
+    <li>
+      <div class="del-number done">&#10003;</div>
+      <div class="del-content">
+        <div class="status-tag complete">Complete</div>
+        <h4>Four-Agent Pipeline &mdash; Architecturally Complete</h4>
+        <p>All four agent system prompts are written and stored. The folder structure, handoff contracts, and case management schema are in place. The system knows how to open a matter, resolve its research flags, draft in your voice, and QA the output before it reaches you. It's waiting for a case to run.</p>
+      </div>
+    </li>
+    <li>
+      <div class="del-number pending">4</div>
+      <div class="del-content">
+        <div class="status-tag pending">Needs Live Case</div>
+        <h4>A Full Draft Initial, Rebuttal, and Supplemental Report</h4>
+        <p>The system produces these; we just need a real matter to run through it. One current or in-progress case is all it takes. The first draft will show us exactly where the system is reliable and where it still needs you. Every correction from that session goes directly back into VOICE.md.</p>
+      </div>
+    </li>
+    <li>
+      <div class="del-number pending">5</div>
+      <div class="del-content">
+        <div class="status-tag pending">Follows From #4</div>
+        <h4>A Correction Log &mdash; What Matched, What Didn't</h4>
+        <p>After each test draft, every deviation from your standard is documented: wrong phrase, wrong format, missing block, wrong tone. The log feeds directly back into the system. By the end of the first live test, we know exactly where BlackBar stands.</p>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<!-- ─── SECTION 4: WHAT WE NEED FROM LANE ───────────────────── -->
+<section class="section">
+  <div class="section-label">What We Need from You</div>
+  <h2>Two asks left. The heavy lifting is done.</h2>
+
+  <p>Reading your filed reports and your benchmark cases took us far. Most of what we needed is already in VOICE.md. The four original asks have narrowed to two &mdash; the ones that can only come from you directly.</p>
+
+  <!-- ASK 1 — DONE -->
+  <div class="ask-card done">
+    <div class="ask-card-header">
+      <h3>Ask 1 &mdash; Review the Draft VOICE.md</h3>
+      <span class="done-badge">&#10003; Complete</span>
+    </div>
+    <div class="completed-note">
+      Done. Mariz provided your three benchmark reports. We read all three cover to cover &mdash; Gleason through Anderson &mdash; and updated VOICE.md to v2.0. The Qualifications section, the updated credential block (CBO, CXLT, TCDS), the ANSI A326.3 defense methodology, the DCOF thresholds, the Peterson playbook, and the rebuttal scope limitation block are all now in the system. A formal review pass from you is still welcome and will happen during the live test session.
+    </div>
+  </div>
+
+  <!-- ASK 2 — DONE -->
+  <div class="ask-card done">
+    <div class="ask-card-header">
+      <h3>Ask 2 &mdash; Identify Your Best Cases as Benchmarks</h3>
+      <span class="done-badge">&#10003; Complete</span>
+    </div>
+    <div class="completed-note">
+      Done. Mariz identified Gleason, Heagy, and Anderson as the three benchmark reports. They are registered in the system and stored in the BlackBar folder. The QA Agent uses them as the scoring standard for every draft it produces.
+    </div>
+  </div>
+
+  <!-- ASK 3 — ACTIVE -->
+  <div class="ask-card">
+    <div class="ask-card-header">
+      <h3>Ask 3 &mdash; Flag the Things You Always Say That Haven't Been Written Down</h3>
+      <span class="time-badge">~30 min, once</span>
+    </div>
+    <p>After 30 years, you have standard language that exists only in your head &mdash; phrases refined after depositions, locked in because they work. A voice memo or a short typed list is all we need. We're looking for:</p>
+    <ul>
+      <li>Phrases you consider locked &mdash; not to be changed under any circumstances</li>
+      <li>How you open a case where there is no surveillance video</li>
+      <li>How you handle a jurisdiction that has adopted a locally amended code edition</li>
+      <li>How you handle slip resistance results that are borderline &mdash; right at the DCOF threshold</li>
+      <li>Your standard language for ADA and stair/elevation cases (the one gap we couldn't fill from your reports)</li>
+      <li>Anything that changed after a deposition challenge and hasn't been updated in older reports</li>
+    </ul>
+    <div class="example-text">
+      A voice memo works. A bullet list works. Anything you write down here goes directly into VOICE.md and governs every draft going forward. You're not explaining it to us &mdash; you're writing it into the system.
+    </div>
+  </div>
+
+  <!-- ASK 4 — ACTIVE -->
+  <div class="ask-card">
+    <div class="ask-card-header">
+      <h3>Ask 4 &mdash; Run One Live Case Together</h3>
+      <span class="time-badge">~60 min, once</span>
+    </div>
+    <p>Pick any current matter &mdash; something active, something where you already have the facts in hand. We run the intake together, the system produces the draft, and you review it line by line in real time. Every correction from that session goes straight back into the system.</p>
+    <p>This is the most valuable thing in the entire project. Reading your reports tells us what you produced. Watching you react to what BlackBar produced tells us what you actually want. Those are not always the same thing. One hour here will do more for the system than anything else at this point.</p>
+    <div class="example-text">
+      No preparation required. Pick any current matter. Caleb runs the intake with you, the draft comes out, and you go through it line by line. One session. That's it.
+    </div>
+  </div>
+
+  <!-- VOICE.MD CALLOUT -->
+  <div class="voicemd-box">
+    <h3>VOICE.md v2.0 &mdash; What's Inside It</h3>
+    <p>This is the document that governs every word BlackBar produces. It's built from your actual filed work &mdash; nothing in it was invented. Here's what it contains:</p>
+    <div class="voicemd-stats">
+      <div class="voicemd-stat">
+        <div class="stat-number">20</div>
+        <div class="stat-label">Sections</div>
+      </div>
+      <div class="voicemd-stat">
+        <div class="stat-number">11</div>
+        <div class="stat-label">Verbatim Blocks</div>
+      </div>
+      <div class="voicemd-stat">
+        <div class="stat-number">10</div>
+        <div class="stat-label">Attack Patterns</div>
+      </div>
+      <div class="voicemd-stat">
+        <div class="stat-number">3</div>
+        <div class="stat-label">Benchmarks Locked</div>
+      </div>
+    </div>
+    <p style="margin-top:18px;">The 11 verbatim boilerplate blocks include: the slip multi-factor opener, English XL VIT reliability, the CXLT registry check, CBO credentials, Swainston Digital Imaging surveillance expertise, the four-question surveillance framework, the NSC distracted walking quote, BOT-3000E device description, ANSI A326.3 defense, ASTM F13 Committee membership, and the plaintiff-without-site-visit dismissal. These are pulled from your filed reports, verbatim. The drafting agent inserts them exactly as you wrote them &mdash; not paraphrased, not improved.</p>
+    <p>One gap remains: your language for ADA and stair/elevation cases. Ask 3 closes it.</p>
+  </div>
+</section>
+
+<!-- ─── SECTION 5: TIMELINE ───────────────────────────────────── -->
+<section class="section">
+  <div class="section-label">Testing Timeline</div>
+  <h2>Week 1 is done. The live test is next.</h2>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-week done">Week 1</div>
+      <div class="timeline-dot done"></div>
+      <div class="timeline-content">
+        <h4 class="done-text">VOICE.md built + benchmark cases registered</h4>
+        <p>Complete. Gleason, Heagy, and Anderson locked as benchmarks. VOICE.md updated to v2.0 from all three. Four-agent pipeline built and documented.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-week active">Week 2</div>
+      <div class="timeline-dot active"></div>
+      <div class="timeline-content">
+        <h4>First live test draft &mdash; Lane provides one current matter</h4>
+        <p>BlackBar runs intake through QA on a real case. Lane reviews the draft and marks what is right vs. wrong vs. close. Every correction is documented and goes back into VOICE.md.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-week">Week 3</div>
+      <div class="timeline-dot"></div>
+      <div class="timeline-content">
+        <h4>VOICE.md updated from correction log. Second draft type tested.</h4>
+        <p>If Week 2 is a slip case, Week 3 runs a rebuttal or supplemental. Each draft type confirms a different part of the system. Lane reviews again &mdash; corrections are shorter each round.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-week">Week 4</div>
+      <div class="timeline-dot"></div>
+      <div class="timeline-content">
+        <h4>Lane provides "things I always say" language &mdash; Ask 3 closes.</h4>
+        <p>ADA/stair language added to VOICE.md. Any deposition-refined phrases that haven't been written down get locked into the system.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-week">Week 5</div>
+      <div class="timeline-dot"></div>
+      <div class="timeline-content">
+        <h4>Third draft type tested. System stability confirmed.</h4>
+        <p>By this point, the correction log from Weeks 2&ndash;4 has been incorporated. The third draft should require significantly fewer corrections. That delta is what tells us the system is learning.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-week">Week 6</div>
+      <div class="timeline-dot"></div>
+      <div class="timeline-content">
+        <h4>Assessment: what's working, what's not, what comes next</h4>
+        <p>Lane and Caleb review results. Decision on whether to expand to ADA/stair module, add additional case types, or move to production on the three modules already tested.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SECTION 6: ONE MORE THING ────────────────────────────── -->
+<section class="section">
+  <div class="section-label">One More Thing</div>
+  <h2>BlackBar does not write opinions. You do.</h2>
+
+  <p>Worth saying plainly: BlackBar drafts structure and language around the opinions you provide. It will not generate "The floor was not maintained in a reasonably safe condition" or "The Plaintiff Expert's methodology is unreliable" on its own. Those are your opinions. They come from your site visit, your analysis, your 30 years of walking into Clark County courtrooms.</p>
+
+  <p>What BlackBar handles is everything around that: the section headers, the boilerplate blocks, the documentation list, the figure captions, the date format, the CXLT registry check, the conclusion paragraph, the credential logo block, the Peterson playbook when Peterson shows up again. The parts that take time but do not require your expertise. The parts that, if done wrong, undermine the credibility of the parts that do.</p>
+
+  <p>When this works, you walk into the drafting step with your notes in hand and walk out with a document that reads like SCG filed it &mdash; because it was built from the same language SCG has always used. Your judgment. Your credentials. Your voice. Faster to produce. Easier to review. The same report that has held up for 30 years.</p>
+
+  <p>All it needs now is a case. Questions and scheduling go to Caleb.</p>
+</section>
+
+<!-- ─── FOOTER ────────────────────────────────────────────────── -->
+<footer class="page-footer">
+  <div class="footer-brand">BlackBar</div>
+  <div class="footer-rule"></div>
+  <p>Swainston Consulting Group Internal Project &mdash; Prepared by Caleb Swainston<br>
+  Phase 3 Kickoff &mdash; 21 March 2026</p>
+</footer>
+
+</body>
+</html>
