@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLACKBAR — Brand Identity Package & Gemini Prompt Library</title>
+<style>
+  :root {
+    --black: #0A0A0A;
+    --charcoal: #1A1A1A;
+    --dark-gray: #2A2A2A;
+    --mid-gray: #3A3A3A;
+    --brass: #C5A55A;
+    --brass-light: #D4B96E;
+    --brass-dark: #A68B3E;
+    --warm-white: #F5F0E8;
+    --steel: #8A8A8A;
+    --red-accent: #8B1A1A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; background: var(--black); color: var(--warm-white); line-height: 1.6; }
+
+  /* Navigation */
+  .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(10,10,10,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--mid-gray); padding: 12px 40px; display: flex; align-items: center; justify-content: space-between; }
+  .nav-brand { font-size: 18px; font-weight: 800; letter-spacing: 4px; color: var(--warm-white); }
+  .nav-brand span { color: var(--brass); }
+  .nav-links { display: flex; gap: 24px; }
+  .nav-links a { color: var(--steel); text-decoration: none; font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--brass); }
+
+  /* Hero */
+  .hero { padding: 140px 40px 80px; text-align: center; background: linear-gradient(180deg, var(--black) 0%, var(--charcoal) 50%, var(--black) 100%); position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; top: 50%; left: 50%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(197,165,90,0.06) 0%, transparent 70%); transform: translate(-50%, -50%); }
+  .hero h1 { font-size: 72px; font-weight: 900; letter-spacing: 12px; color: var(--warm-white); margin-bottom: 16px; position: relative; }
+  .hero h1 .bar { display: inline-block; width: 80px; height: 4px; background: var(--brass); vertical-align: middle; margin: 0 16px; }
+  .hero .tagline { font-size: 20px; letter-spacing: 6px; color: var(--brass); font-weight: 600; margin-bottom: 8px; }
+  .hero .subtitle { font-size: 14px; color: var(--steel); letter-spacing: 2px; margin-bottom: 40px; }
+  .hero .descriptor { font-size: 16px; color: var(--steel); max-width: 600px; margin: 0 auto; line-height: 1.8; }
+  .hero .badge { display: inline-block; background: var(--dark-gray); border: 1px solid var(--mid-gray); color: var(--brass-light); font-size: 11px; font-weight: 700; letter-spacing: 2px; padding: 6px 20px; border-radius: 4px; margin-top: 32px; }
+
+  /* Section */
+  .section { padding: 80px 40px; max-width: 1200px; margin: 0 auto; }
+  .section-header { margin-bottom: 48px; }
+  .section-header .number { font-size: 13px; color: var(--brass); font-weight: 700; letter-spacing: 3px; margin-bottom: 8px; }
+  .section-header h2 { font-size: 36px; font-weight: 800; letter-spacing: 2px; color: var(--warm-white); margin-bottom: 12px; }
+  .section-header p { font-size: 16px; color: var(--steel); max-width: 700px; line-height: 1.7; }
+
+  .divider { height: 1px; background: linear-gradient(to right, transparent, var(--mid-gray), transparent); margin: 0 40px; }
+
+  /* Color Palette */
+  .palette-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .swatch { border-radius: 8px; overflow: hidden; }
+  .swatch .color-block { height: 120px; display: flex; align-items: flex-end; padding: 12px; }
+  .swatch .color-info { background: var(--charcoal); padding: 12px 14px; }
+  .swatch .color-name { font-size: 14px; font-weight: 700; color: var(--warm-white); margin-bottom: 2px; }
+  .swatch .color-hex { font-size: 12px; color: var(--steel); font-family: 'Courier New', monospace; }
+  .swatch .color-use { font-size: 11px; color: var(--steel); margin-top: 4px; }
+
+  /* Typography */
+  .type-specimen { background: var(--charcoal); border-radius: 12px; padding: 32px; margin-bottom: 24px; border: 1px solid var(--mid-gray); }
+  .type-specimen .label { font-size: 11px; color: var(--brass); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+  .type-primary { font-size: 48px; font-weight: 900; letter-spacing: 8px; color: var(--warm-white); }
+  .type-secondary { font-size: 24px; font-weight: 600; letter-spacing: 4px; color: var(--brass); }
+  .type-body { font-size: 16px; color: var(--steel); line-height: 1.8; max-width: 600px; }
+
+  /* Prompt Cards */
+  .prompt-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+  .prompt-card { background: var(--charcoal); border: 1px solid var(--mid-gray); border-radius: 12px; overflow: hidden; transition: all 0.3s; }
+  .prompt-card:hover { border-color: var(--brass-dark); box-shadow: 0 0 32px rgba(197,165,90,0.08); }
+  .prompt-card-header { padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--mid-gray); }
+  .prompt-card-header h3 { font-size: 18px; font-weight: 700; color: var(--warm-white); }
+  .prompt-card-header .asset-type { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--brass); background: rgba(197,165,90,0.12); padding: 4px 12px; border-radius: 4px; }
+  .prompt-card-body { padding: 24px; }
+  .prompt-card-body .use-case { font-size: 13px; color: var(--brass-light); font-weight: 600; margin-bottom: 12px; }
+  .prompt-text { background: var(--black); border: 1px solid var(--mid-gray); border-radius: 8px; padding: 20px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8; color: #C8C8C8; white-space: pre-wrap; word-wrap: break-word; position: relative; }
+  .prompt-text::before { content: 'GEMINI PROMPT'; position: absolute; top: -10px; left: 16px; background: var(--black); padding: 0 8px; font-size: 10px; font-weight: 700; color: var(--brass-dark); letter-spacing: 2px; font-family: 'Segoe UI', Arial, sans-serif; }
+  .prompt-notes { margin-top: 16px; padding: 12px 16px; background: rgba(197,165,90,0.06); border-left: 3px solid var(--brass-dark); border-radius: 0 6px 6px 0; }
+  .prompt-notes .notes-label { font-size: 11px; font-weight: 700; color: var(--brass); letter-spacing: 1px; margin-bottom: 4px; }
+  .prompt-notes p { font-size: 13px; color: var(--steel); line-height: 1.5; }
+
+  /* Brand Pillars */
+  .pillars-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .pillar { background: var(--charcoal); border: 1px solid var(--mid-gray); border-radius: 12px; padding: 28px; text-align: center; }
+  .pillar .pillar-number { font-size: 48px; font-weight: 900; color: var(--brass); opacity: 0.3; margin-bottom: 8px; }
+  .pillar h3 { font-size: 18px; font-weight: 800; color: var(--warm-white); letter-spacing: 2px; margin-bottom: 8px; }
+  .pillar p { font-size: 14px; color: var(--steel); line-height: 1.6; }
+
+  /* Voice Grid */
+  .voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .voice-do, .voice-dont { background: var(--charcoal); border-radius: 12px; padding: 24px; }
+  .voice-do { border: 1px solid #2D5A2D; }
+  .voice-dont { border: 1px solid #5A2D2D; }
+  .voice-do .voice-label { color: #5AAA5A; }
+  .voice-dont .voice-label { color: #AA5A5A; }
+  .voice-label { font-size: 12px; font-weight: 700; letter-spacing: 2px; margin-bottom: 12px; }
+  .voice-item { font-size: 14px; color: var(--steel); padding: 8px 0; border-bottom: 1px solid var(--mid-gray); line-height: 1.5; }
+  .voice-item:last-child { border-bottom: none; }
+
+  /* Deployment table */
+  .deploy-table { width: 100%; border-collapse: collapse; }
+  .deploy-table th { background: var(--dark-gray); color: var(--brass); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 12px 16px; text-align: left; border-bottom: 2px solid var(--brass-dark); }
+  .deploy-table td { padding: 14px 16px; border-bottom: 1px solid var(--mid-gray); font-size: 14px; color: var(--steel); }
+  .deploy-table tr:hover td { background: rgba(197,165,90,0.04); }
+
+  .footer { text-align: center; padding: 60px 40px; border-top: 1px solid var(--mid-gray); }
+  .footer p { font-size: 12px; color: var(--mid-gray); letter-spacing: 2px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-brand">BLACK<span>BAR</span></div>
+  <div class="nav-links">
+    <a href="#identity">Identity</a>
+    <a href="#palette">Color</a>
+    <a href="#typography">Type</a>
+    <a href="#voice">Voice</a>
+    <a href="#prompts">Prompts</a>
+    <a href="#deploy">Deploy</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="tagline">SAVAGE WINS</div>
+  <h1>BLACK<span class="bar"></span>BAR</h1>
+  <div class="subtitle">REDACT THE NOISE. EXTRACT THE TRUTH.</div>
+  <div class="descriptor">Forensic AI Agent for Construction Code, and Legal Rebuttal.<br>Brand Identity Package & Production Gemini Prompt Library.</div>
+  <div class="badge">SWAINSTON CONSULTING GROUP &bull; V2.0 &bull; MARCH 2026</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- SECTION 1: BRAND IDENTITY -->
+<div class="section" id="identity">
+  <div class="section-header">
+    <div class="number">01 &mdash; BRAND IDENTITY</div>
+    <h2>Brand Architecture</h2>
+    <p>BlackBar operates at the intersection of forensic precision and tactical aggression. The identity system communicates that every opinion is backed by code, every rebuttal is loaded, and every deliverable survives cross-examination.</p>
+  </div>
+
+  <div class="pillars-grid">
+    <div class="pillar">
+      <div class="pillar-number">I</div>
+      <h3>SAVAGE WINS</h3>
+      <p>The competitive posture. BlackBar doesn't participate &mdash; it dominates. Controlled aggression backed by forensic discipline. The bear with the scales: raw power in service of justice.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-number">II</div>
+      <h3>REDACT THE NOISE</h3>
+      <p>The methodology. Strip away irrelevant claims, manufactured complexity, and opposing expert bloat. What remains is code-backed, standard-cited, defensible truth. The redaction bar is the tool; the gavel is the result.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-number">III</div>
+      <h3>EXTRACT THE TRUTH</h3>
+      <p>The deliverable. Every output is courtroom-ready. Not summaries &mdash; forensic instruments. Expert reports that survive Daubert. Rebuttals that expose methodology gaps. Standards matrices that lock jurisdiction-specific authority.</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- SECTION 2: MARK SYSTEM -->
+<div class="section">
+  <div class="section-header">
+    <div class="number">02 &mdash; MARK SYSTEM</div>
+    <h2>Logo & Iconography</h2>
+    <p>Two primary marks, one secondary mark, and a lifestyle identity system anchored in the Las Vegas desert tactical aesthetic.</p>
+  </div>
+
+  <table class="deploy-table">
+    <thead><tr><th>Mark</th><th>Description</th><th>Use Context</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="color: var(--warm-white); font-weight: 700;">Primary Mark &mdash; Bear + Scales</td>
+        <td>Muscular, geometric-armored bear in aggressive stance, holding brass scales of justice in left hand. Right fist clenched. Angular faceted body suggesting both digital construction and raw biological power. Dark charcoal body with gold/brass geometric line accents at joints.</td>
+        <td>Hero placement, report covers, presentations, business cards, dark backgrounds</td>
+      </tr>
+      <tr>
+        <td style="color: var(--warm-white); font-weight: 700;">Primary Mark &mdash; Light Variant</td>
+        <td>Same bear + scales composition on white/light background. Body rendered in darker charcoal with more visible geometric faceting. Scales remain brass/gold. "BLACKBAR" and "SAVAGE WINS" in dark type below.</td>
+        <td>Print collateral, light-background documents, letterhead</td>
+      </tr>
+      <tr>
+        <td style="color: var(--warm-white); font-weight: 700;">Secondary Mark &mdash; Redaction Gavel</td>
+        <td>Rectangular redaction bar containing a gavel silhouette in negative space. Below: "BLACKBAR" in bold condensed sans-serif, "REDACT THE NOISE. EXTRACT THE TRUTH." tagline, and "FORENSIC AI AGENT FOR CODE, CONSTRUCTION & LEGAL REBUTTAL" descriptor. Monochromatic warm-white on dark.</td>
+        <td>AI-focused contexts, digital product UI, technical documentation, app splash screens</td>
+      </tr>
+      <tr>
+        <td style="color: var(--warm-white); font-weight: 700;">Lifestyle Identity &mdash; Tactical Vegas</td>
+        <td>Desert shooting range with Las Vegas skyline backdrop. Tesla Cybertruck and Model 3 flanking the scene. Female tactical operator in black, shooting stance with AR-platform rifle, ear protection, sunglasses. "CONTROLLED DEMOLITION" or "TACTICAL FIREPOWER" typography overlay. TR monogram mark with bear icon.</td>
+        <td>Social media, brand campaigns, trade show banners, merch, conference slides</td>
+      </tr>
+      <tr>
+        <td style="color: var(--warm-white); font-weight: 700;">Business Card &mdash; Dual Brand</td>
+        <td>Matte black background. Left: BlackBar bear + scales mark with "BLACKBAR / SAVAGE WINS." Right: Swainston Consulting Group typography stack with Lane Swainston, Principal Consultant, contact details. Gold accent line separating brand zones.</td>
+        <td>Professional networking, client meetings, case intake</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="divider"></div>
+
+<!-- SECTION 3: COLOR PALETTE -->
+<div class="section" id="palette">
+  <div class="section-header">
+    <div class="number">03 &mdash; COLOR SYSTEM</div>
+    <h2>Palette</h2>
+    <p>A dark-dominant system with brass metallics as the primary accent. Communicates authority, precision, and controlled power.</p>
+  </div>
+
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="color-block" style="background: #0A0A0A;"></div>
+      <div class="color-info">
+        <div class="color-name">Void Black</div>
+        <div class="color-hex">#0A0A0A</div>
+        <div class="color-use">Primary background, report covers</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background: #1A1A1A;"></div>
+      <div class="color-info">
+        <div class="color-name">Charcoal</div>
+        <div class="color-hex">#1A1A1A</div>
+        <div class="color-use">Card backgrounds, secondary surfaces</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background: #C5A55A;"></div>
+      <div class="color-info">
+        <div class="color-name">Brass</div>
+        <div class="color-hex">#C5A55A</div>
+        <div class="color-use">Primary accent, scales, headings, CTAs</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background: #F5F0E8;"></div>
+      <div class="color-info">
+        <div class="color-name">Warm White</div>
+        <div class="color-hex">#F5F0E8</div>
+        <div class="color-use">Primary text, logo on dark</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="color-block" style="background: #8B1A1A;"></div>
+      <div class="color-info">
+        <div class="color-name">Redaction Red</div>
+        <div class="color-hex">#8B1A1A</div>
+        <div class="color-use">Alerts, redaction marks, emphasis</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- SECTION 4: TYPOGRAPHY -->
+<div class="section" id="typography">
+  <div class="section-header">
+    <div class="number">04 &mdash; TYPOGRAPHY</div>
+    <h2>Type System</h2>
+    <p>Bold condensed display for brand marks. Clean sans-serif for body. Monospace for technical/code content. No decorative fonts. No serifs.</p>
+  </div>
+
+  <div class="type-specimen">
+    <div class="label">PRIMARY &mdash; DISPLAY</div>
+    <div class="type-primary">BLACKBAR</div>
+    <div style="font-size: 13px; color: var(--steel); margin-top: 8px;">Bold Condensed Sans-Serif &bull; 900 Weight &bull; Letter-spacing: 8&ndash;12px &bull; All caps always</div>
+  </div>
+
+  <div class="type-specimen">
+    <div class="label">SECONDARY &mdash; TAGLINE</div>
+    <div class="type-secondary">SAVAGE WINS</div>
+    <div style="font-size: 13px; color: var(--steel); margin-top: 8px;">Semibold Sans-Serif &bull; 600 Weight &bull; Letter-spacing: 4&ndash;6px &bull; Brass color (#C5A55A)</div>
+  </div>
+
+  <div class="type-specimen">
+    <div class="label">BODY &mdash; REPORT TEXT</div>
+    <div class="type-body">Based on my inspection of the subject property and review of the applicable governing standards, including IBC Section 1003.4 and ANSI A326.3-2021, it is my professional opinion that the walking surface at the location of the incident failed to meet the minimum dynamic coefficient of friction required by the adopted standard.</div>
+    <div style="font-size: 13px; color: var(--steel); margin-top: 8px;">Regular Sans-Serif &bull; 400 Weight &bull; 16px / 1.8 line-height &bull; Steel gray on dark, dark gray on light</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- SECTION 5: BRAND VOICE -->
+<div class="section" id="voice">
+  <div class="section-header">
+    <div class="number">05 &mdash; BRAND VOICE</div>
+    <h2>Voice & Tone</h2>
+    <p>BlackBar speaks like a seasoned expert witness who has been deposed 200 times and has never been successfully impeached. Every word is chosen for defensibility.</p>
+  </div>
+
+  <div class="voice-grid">
+    <div class="voice-do">
+      <div class="voice-label">BLACKBAR SOUNDS LIKE</div>
+      <div class="voice-item"><strong>Disciplined authority.</strong> "Based on my inspection and the applicable governing standards, the walking surface failed to meet minimum DCOF requirements."</div>
+      <div class="voice-item"><strong>Tactical precision.</strong> "The opposing expert's reliance on visual inspection alone, without tribometer testing, renders his slip-resistance opinion scientifically unsupported."</div>
+      <div class="voice-item"><strong>Controlled aggression.</strong> "This constitutes a code violation. There is no qualifying exception."</div>
+      <div class="voice-item"><strong>Forensic confidence.</strong> "The evidence does not support this conclusion. Here is why."</div>
+    </div>
+    <div class="voice-dont">
+      <div class="voice-label">BLACKBAR NEVER SOUNDS LIKE</div>
+      <div class="voice-item"><strong>Hedging.</strong> "It might be possible that there could potentially be a code issue..."</div>
+      <div class="voice-item"><strong>Corporate polish.</strong> "We leverage cutting-edge AI to deliver synergistic compliance solutions..."</div>
+      <div class="voice-item"><strong>Apologetic.</strong> "Unfortunately, it appears that the standard may not have been fully met..."</div>
+      <div class="voice-item"><strong>Generic AI.</strong> "Here are some things to consider about building codes..."</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- SECTION 6: GEMINI PROMPT LIBRARY -->
+<div class="section" id="prompts">
+  <div class="section-header">
+    <div class="number">06 &mdash; GEMINI PROMPT LIBRARY</div>
+    <h2>Production-Grade Image Prompts</h2>
+    <p>Deploy-ready prompts for Google Gemini image generation. Each prompt is calibrated to reproduce and extend the BlackBar visual identity system. Organized by asset type.</p>
+  </div>
+
+  <div class="prompt-grid">
+
+    <!-- PROMPT 1: Primary Logo Dark -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Primary Logo &mdash; Bear + Scales (Dark)</h3>
+        <span class="asset-type">LOGO MARK</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: Hero placement, report covers, dark-background applications</div>
+        <div class="prompt-text">Create a brand logo illustration on a deep black background (#0A0A0A). The subject is a powerful, muscular bear standing upright in an aggressive combat stance. The bear's body is rendered with angular, geometric faceted armor plating — like a digital wireframe made physical — with thin gold/brass (#C5A55A) accent lines tracing the geometric joints and edges. The bear's mouth is open in a roar showing teeth. In its left hand, held outward at shoulder height, the bear grips a set of traditional legal scales of justice rendered in polished brass/gold metal with fine chain links. The bear's right fist is clenched at its side, ready to strike. Below the figure, centered, the word "BLACKBAR" in bold condensed sans-serif white (#F5F0E8) type with wide letter-spacing. Below that, "SAVAGE WINS" in smaller semibold type in brass/gold (#C5A55A) with letter-spacing. The overall mood is dark, authoritative, and menacing — controlled power in service of justice. Lighting is dramatic and directional from upper left, creating deep shadows on the bear's geometric armor. No background elements. No gradients. Clean composition. Photorealistic metallic rendering on the scales and brass accents. The bear should feel like a fusion of biological predator and digital construct.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>Generate at 2048x2048 minimum. Request PNG with transparency if available. The geometric faceting on the bear is the signature detail — it must read as angular armor plates with gold wire accents at the seams, not smooth organic fur.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 2: Primary Logo Light -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Primary Logo &mdash; Bear + Scales (Light)</h3>
+        <span class="asset-type">LOGO MARK</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: Print collateral, letterhead, light-background documents</div>
+        <div class="prompt-text">Create a brand logo illustration on a clean white background. The subject is a powerful, muscular bear standing upright in an aggressive combat stance, facing slightly left. The bear's body is rendered in dark charcoal (#2A2A2A) with visible angular, geometric faceted armor plating. Thin gold/brass (#C5A55A) accent lines trace the geometric joints and plate edges, more visible against the dark body on white. The bear's mouth is open in a roar showing teeth. In its left hand, held outward at shoulder height, the bear grips traditional legal scales of justice rendered in warm brass/gold metal with chain links. The right fist is clenched forward in a power stance. Below the figure, centered: "BLACKBAR" in bold condensed sans-serif dark type (#1A1A1A) with wide letter-spacing, and below that "SAVAGE WINS" in brass/gold (#C5A55A). The bear should feel imposing and architectural — geometric digital armor over a biological predator form. Clean white negative space. No background elements. Crisp edges suitable for print reproduction.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>The light variant should feel equally aggressive as the dark version. The geometric armor plating becomes more defined on white because the gold accent lines have higher contrast. Generate at print resolution (300dpi equivalent).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 3: Redaction Gavel Mark -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Secondary Mark &mdash; Redaction Gavel</h3>
+        <span class="asset-type">SECONDARY MARK</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: AI product UI, technical documentation, digital product branding</div>
+        <div class="prompt-text">Create a minimalist brand mark on a dark matte charcoal background (#1A1A1A) with subtle paper-like texture. The central element is a horizontal rectangular redaction bar — like a censorship block — rendered in warm off-white (#F5F0E8) with slightly rough edges suggesting a rubber stamp or redaction marker. Inside the redaction bar, a gavel silhouette is cut out in negative space, showing the dark background through it. The gavel faces right, with the head at the right side of the bar. Below the redaction bar, centered: "BLACKBAR" in bold condensed sans-serif warm white type with wide letter-spacing. Below that: "REDACT THE NOISE. EXTRACT THE TRUTH." in smaller caps, same warm white. Below that: "FORENSIC AI AGENT FOR CODE, CONSTRUCTION & LEGAL REBUTTAL" in the smallest type, slightly more muted gray. The composition is centered, square format, with generous dark space around the elements. The mood is institutional, authoritative, and technical — like a classified document cover page. Flat design, no gradients, no 3D effects.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>This mark is the AI-facing identity. It should feel like a forensic instrument, not a mascot. The redaction bar with gavel negative space is the key design element. The rough edges on the bar are intentional — it should look stamped, not digitally perfect.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 4: Business Card -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Business Card &mdash; Dual Brand</h3>
+        <span class="asset-type">COLLATERAL</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: Professional networking, client meetings, case intake</div>
+        <div class="prompt-text">Create a photorealistic rendering of a premium matte black business card, 3.5 x 2 inches, slightly angled on a dark surface with subtle ambient lighting. The card layout is divided into two zones: LEFT ZONE: The BlackBar bear + scales logo mark, scaled to approximately 40% of card height. Below it: "BLACKBAR" in bold condensed white type, and "SAVAGE WINS" in small brass/gold type. RIGHT ZONE: "SWAINSTON" in large semibold white sans-serif, "CONSULTING GROUP" below it in smaller weight. Below a thin gold separator line: "Lane Swainston" in medium white type, "Principal Consultant" in smaller gray type. Contact block below: Telephone, Facsimile, E-mail, Web labels in small gray with corresponding values in white. A very subtle gold (#C5A55A) horizontal hairline runs between the two brand zones. The card stock appears thick, premium, with a soft-touch matte finish. Lighting creates a subtle sheen on the card edges. Background is dark brushed surface. Render as if photographed for a brand guideline document.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>The dual-brand layout is intentional: BlackBar is the tool identity, Swainston Consulting Group is the professional practice. They share the card but maintain distinct zones. The gold separator line is the only element connecting them visually.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 5: Tactical Vegas Lifestyle - Controlled Demolition -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Lifestyle &mdash; Controlled Demolition</h3>
+        <span class="asset-type">CAMPAIGN IMAGERY</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: Social media hero, trade show banners, brand campaigns</div>
+        <div class="prompt-text">Create a cinematic wide-angle photograph set in the Nevada desert on the outskirts of Las Vegas. The Las Vegas Strip skyline is visible in the hazy background, with the Stratosphere tower identifiable on the left. The scene is a desert shooting range on sandy, hilly terrain. In the center foreground, a woman in her 30s with dark hair pulled back stands in a tactical shooting stance, aiming an AR-15 style rifle. She wears a fitted black t-shirt, olive tactical pants, over-ear hearing protection, and dark wraparound sunglasses. Her stance is confident and practiced — weight forward, cheek on stock. Flanking her: to the left, a Tesla Cybertruck in its signature angular stainless steel, positioned at a 3/4 angle. To the right, a black Tesla Model 3, positioned at a similar angle. A green metal barrel sits in the mid-ground right. The lighting is warm late-afternoon desert sun, slightly hazy, golden. At the bottom of the frame, large bold condensed typography reads "CONTROLLED DEMOLITION" in warm white with subtle drop shadow. Above the main text, a monogram mark showing interlocking "T" and "R" letters with a small aggressive bear/panther face icon below it. The mood is tactical confidence — not military cosplay, but genuine competence. Photorealistic, cinematic color grading with warm desert tones and slight desaturation.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>This is the lifestyle identity extension. It communicates that BlackBar's people are as formidable as its technology. The Teslas signal modernity and unconventional thinking. The desert range signals Nevada roots and operational readiness. "Controlled Demolition" is a forensic construction term repurposed as brand attitude.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 6: Tactical Vegas Lifestyle - Tactical Firepower -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Lifestyle &mdash; Tactical Firepower</h3>
+        <span class="asset-type">CAMPAIGN IMAGERY</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: Social media, conference presentations, brand story content</div>
+        <div class="prompt-text">Create a cinematic wide-angle photograph in the Nevada desert with the Las Vegas skyline visible in the hazy background, including the Stratosphere tower and the High Roller observation wheel. Desert terrain with sandy hills in the mid-ground. In the center, a woman in her 30s with dark hair stands in an active tactical shooting stance, aiming an AR-15 style rifle to the right of frame. She wears a black fitted t-shirt, tactical pants, over-ear hearing protection in olive/tan, and dark tactical sunglasses. Behind her to the left: a Tesla Cybertruck in raw stainless steel at a 3/4 angle, its angular body catching warm desert light. To the right: a black Tesla Model 3. A green metal barrel sits in the right mid-ground. Bold typography overlay at bottom right: "TACTICAL FIREPOWER" in large bold condensed white sans-serif with subtle shadow, and below it "TACTICAL TESLAS: VEGAS OPS" in smaller condensed type. The mood is cinematic desert tactical — warm golden-hour light, slight atmospheric haze, desaturated color grade leaning warm. The composition should feel like a still from a high-budget action film set in the Vegas desert. Photorealistic rendering.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>Variant of the Controlled Demolition composition with different typography and slightly adjusted framing. The "Tactical Teslas: Vegas Ops" sub-brand extends BlackBar into lifestyle/culture territory. Deploy as a series, not standalone.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 7: Expert Headshot -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Expert Portrait &mdash; Lane Swainston</h3>
+        <span class="asset-type">PORTRAIT</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: Expert witness disclosure, website, report author photo, conference bio</div>
+        <div class="prompt-text">Create a professional studio portrait photograph of a man in his late 50s to early 60s. He has short salt-and-pepper gray hair, a neatly trimmed gray goatee (mustache and chin beard connected), and a strong, squared jawline. His expression is serious and direct — confident authority without smiling. He looks directly at camera with slightly narrowed eyes conveying experienced skepticism. He wears a light-colored dress shirt with thin vertical stripes, collar open, no tie. The background is pure black, creating a dramatic studio portrait effect. Lighting is classic Rembrandt — primary key light from the upper right creating a triangle of light on the shadow-side cheek, with a subtle fill light on the left to preserve detail in the shadows. The light emphasizes the texture of the goatee and the lines of experience on the face. Skin tones are warm and natural. The overall mood is authoritative and formidable — this is a man who has testified hundreds of times and has never been successfully impeached. Portrait orientation, head and upper chest framing, sharp focus on the eyes. Professional headshot quality.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>This prompt reproduces the expert portrait aesthetic. For the actual Lane Swainston headshot, use the original photograph — do not AI-generate Lane's likeness. This prompt exists to generate consistent portrait-style imagery for brand contexts where the aesthetic must match but the subject differs (e.g., team page, associate portraits).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 8: Report Cover -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Expert Report Cover</h3>
+        <span class="asset-type">DOCUMENT TEMPLATE</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: Expert report cover pages, court filing covers, deliverable branding</div>
+        <div class="prompt-text">Create a document cover page design on a deep black background (#0A0A0A). At the top center, the BlackBar bear + scales logo mark at approximately 30% of page width — a geometric-armored muscular bear holding brass scales of justice, rendered with angular faceted plates and gold (#C5A55A) accent lines at the geometric joints. Below the logo: "BLACKBAR" in bold condensed sans-serif warm white (#F5F0E8) with wide letter-spacing. A thin horizontal gold line spans 60% of the page width as a separator. Below the separator, centered, a large block of text space for the report title — shown as placeholder text "EXPERT REPORT" in semibold white type, with a second line "[Case Name v. Case Name]" in slightly smaller brass/gold type. Below that, a thin gold line, then "Prepared by:" in small gray type, "Lane Swainston, Principal Consultant" in white, "Swainston Consulting Group" in gray. At the very bottom: "CONFIDENTIAL — ATTORNEY WORK PRODUCT" in small red (#8B1A1A) type. The overall design is institutional, authoritative, and dark — like a classified intelligence briefing cover. No decorative elements. No images beyond the logo. Severe, clean, powerful.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>This is for visual reference and brand consistency — the actual report covers should be generated programmatically via docx-js using the design system tokens defined in this package. The Gemini output serves as a rendering target for the development team.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 9: Social Media - Quote Card -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Social Card &mdash; Expert Quote</h3>
+        <span class="asset-type">SOCIAL MEDIA</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: LinkedIn, Instagram, Twitter/X quote cards</div>
+        <div class="prompt-text">Create a square social media card (1080x1080) with a deep black background (#0A0A0A). In the upper left corner, the BlackBar redaction gavel mark (horizontal redaction bar with gavel silhouette cut out in negative space) rendered small, approximately 15% of card width, in warm off-white. The center of the card contains a large pull quote in warm white (#F5F0E8) bold condensed sans-serif: "REDACT THE NOISE. EXTRACT THE TRUTH." Letter-spacing is wide. The quote is centered both horizontally and vertically. Below the quote, a thin horizontal brass/gold (#C5A55A) line, 40% of card width. Below the line: "BLACKBAR" in small brass type with letter-spacing, and below that "Forensic AI Agent for Construction Code & Legal Rebuttal" in very small gray (#8A8A8A) type. The overall feel is stark, institutional, and commanding — like a statement carved in stone. No decorative elements. No gradients. No images. Pure typography on black.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>This template works for any BlackBar quote or stat. Replace the center text with case wins, code citations, or methodology statements. The layout stays fixed. Swap quote text only.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 10: Conference Banner -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Conference Banner &mdash; Trade Show</h3>
+        <span class="asset-type">LARGE FORMAT</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: Trade show booths, conference presentations, event signage</div>
+        <div class="prompt-text">Create a wide-format banner design (3:1 aspect ratio) on a deep black background. Left third: the BlackBar bear + scales logo mark at large scale — geometric-armored muscular bear in aggressive stance holding brass scales of justice, with gold accent lines on angular armor plates. The bear faces right, toward the center of the banner. Center third: Large bold condensed white text "BLACKBAR" with extreme letter-spacing. Below it: "SAVAGE WINS" in brass/gold (#C5A55A). Below that, a thin horizontal gold line. Below the line: "REDACT THE NOISE. EXTRACT THE TRUTH." in medium white type. Right third: Three stacked text blocks in small sans-serif — "FORENSIC AI FOR CONSTRUCTION CODE" / "EXPERT WITNESS SUPPORT" / "LEGAL REBUTTAL ENGINE" — each in warm white with brass bullet markers. At the bottom right corner: "SWAINSTON CONSULTING GROUP" in small gray type with "swainston.com" below it. The overall banner should feel like the exterior of a black ops command center — dark, institutional, powerful. No decorative elements beyond the logo. The negative space is as important as the content.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>Generate at highest resolution available. The banner must read clearly at 10 feet (logo + BLACKBAR text) and at 3 feet (taglines and service descriptions). The 3:1 ratio works for both physical banners and digital conference backdrops.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 11: App Splash Screen -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>App Splash &mdash; Agent Loading Screen</h3>
+        <span class="asset-type">UI / DIGITAL PRODUCT</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: BlackBar agent startup screen, web app loading state, desktop app splash</div>
+        <div class="prompt-text">Create a full-screen app splash screen on a deep black background (#0A0A0A). Centered vertically: the BlackBar redaction gavel mark (horizontal redaction bar with gavel silhouette in negative space) rendered in warm off-white (#F5F0E8) at medium scale, approximately 25% of screen width. Below the mark: "BLACKBAR" in bold condensed white with wide letter-spacing. Below that: a subtle animated-style loading indicator — three small brass/gold (#C5A55A) dots in a horizontal line, with the center dot slightly brighter, suggesting a pulsing load state. Below the loading indicator: "REDACT THE NOISE. EXTRACT THE TRUTH." in very small gray (#6A6A6A) type. At the very bottom of the screen: "v2.0 | Swainston Consulting Group" in tiny gray type. The overall aesthetic is minimal, dark, and technical — like booting up a forensic analysis tool. The redaction gavel mark should have very subtle inner glow suggesting it's being illuminated from behind, creating a slight halo of warm light on the black background. No other decorative elements.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>This prompt captures the static frame. In actual implementation, the loading dots would pulse and the gavel mark would fade in on a 1-second delay. Generate at 1920x1080 (landscape) and 1080x1920 (portrait) for desktop and mobile respectively.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT 12: Opposing Expert Dossier Cover -->
+    <div class="prompt-card">
+      <div class="prompt-card-header">
+        <h3>Dossier Cover &mdash; Opposing Expert Intel</h3>
+        <span class="asset-type">DOCUMENT TEMPLATE</span>
+      </div>
+      <div class="prompt-card-body">
+        <div class="use-case">Use: Opposing expert dossier covers, adversarial intelligence briefings</div>
+        <div class="prompt-text">Create a document cover page with a classified intelligence dossier aesthetic. Background is deep charcoal (#1A1A1A) with very subtle noise/grain texture suggesting aged paper under dark conditions. At the top center: the BlackBar redaction gavel mark in warm off-white, small scale. Below it: "BLACKBAR" in condensed white type. A horizontal brass/gold line spans 50% of page width. Below the line, centered: "ADVERSARIAL INTELLIGENCE DOSSIER" in brass/gold (#C5A55A) all-caps with letter-spacing. Below that: a large redaction bar — a solid warm off-white rectangle approximately 60% of page width and 30px tall — covering where the opposing expert's name would go, with "[EXPERT NAME]" printed over the redaction bar in dark type, partially obscured as if being declassified. Below the name bar: "METHODOLOGY PATTERNS | PRIOR CONTRADICTIONS | CROSS-EXAMINATION TARGETS" in small gray type separated by pipe characters. At the bottom: "PREPARED BY BLACKBAR FOR SWAINSTON CONSULTING GROUP" in small brass type, and below it "CONFIDENTIAL — ATTORNEY WORK PRODUCT — DO NOT DISTRIBUTE" in small red (#8B1A1A) type. The overall mood is like a CIA briefing document reimagined for construction litigation — dark, classified, serious.</div>
+        <div class="prompt-notes">
+          <div class="notes-label">DEPLOYMENT NOTES</div>
+          <p>This is the visual identity for Agent 3's adversarial intelligence output. The redaction bar over the expert name is both functional (replaced with actual name in production) and thematic (reinforces the "Redact the Noise" brand pillar). The classified-document aesthetic communicates that this intelligence is proprietary and strategically valuable.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- SECTION 7: DEPLOYMENT -->
+<div class="section" id="deploy">
+  <div class="section-header">
+    <div class="number">07 &mdash; DEPLOYMENT MATRIX</div>
+    <h2>Prompt Deployment Guide</h2>
+    <p>Each prompt is tagged by asset type, aspect ratio, resolution target, and primary deployment context.</p>
+  </div>
+
+  <table class="deploy-table">
+    <thead>
+      <tr>
+        <th>Prompt</th>
+        <th>Aspect Ratio</th>
+        <th>Resolution</th>
+        <th>Format</th>
+        <th>Primary Use</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Primary Logo Dark</td><td>1:1</td><td>2048x2048</td><td>PNG (transparency)</td><td>Report covers, hero placement</td></tr>
+      <tr><td>Primary Logo Light</td><td>1:1</td><td>2048x2048</td><td>PNG (transparency)</td><td>Print collateral, letterhead</td></tr>
+      <tr><td>Redaction Gavel Mark</td><td>1:1</td><td>2048x2048</td><td>PNG</td><td>App icon, UI branding</td></tr>
+      <tr><td>Business Card</td><td>7:4</td><td>2100x1200</td><td>PNG/PDF</td><td>Print production</td></tr>
+      <tr><td>Controlled Demolition</td><td>3:2</td><td>3000x2000</td><td>JPEG</td><td>Social media, banners</td></tr>
+      <tr><td>Tactical Firepower</td><td>3:2</td><td>3000x2000</td><td>JPEG</td><td>Social media, campaigns</td></tr>
+      <tr><td>Expert Portrait</td><td>2:3</td><td>1600x2400</td><td>JPEG</td><td>Bio pages, disclosures</td></tr>
+      <tr><td>Report Cover</td><td>Letter (8.5x11)</td><td>2550x3300</td><td>PNG/PDF</td><td>Expert report covers</td></tr>
+      <tr><td>Social Quote Card</td><td>1:1</td><td>1080x1080</td><td>PNG</td><td>LinkedIn, Instagram</td></tr>
+      <tr><td>Conference Banner</td><td>3:1</td><td>4500x1500</td><td>PNG</td><td>Trade shows, events</td></tr>
+      <tr><td>App Splash Screen</td><td>16:9 / 9:16</td><td>1920x1080</td><td>PNG</td><td>Desktop/mobile app</td></tr>
+      <tr><td>Dossier Cover</td><td>Letter (8.5x11)</td><td>2550x3300</td><td>PNG/PDF</td><td>Adversarial intel briefs</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="divider"></div>
+
+<!-- SECTION 8: DESIGN TOKENS -->
+<div class="section">
+  <div class="section-header">
+    <div class="number">08 &mdash; DESIGN TOKENS</div>
+    <h2>Implementation Reference</h2>
+    <p>Programmatic values for developers implementing the BlackBar identity in code, CSS, or document generation.</p>
+  </div>
+
+  <table class="deploy-table">
+    <thead><tr><th>Token</th><th>Value</th><th>Usage</th></tr></thead>
+    <tbody>
+      <tr><td>--bb-black</td><td>#0A0A0A</td><td>Primary background</td></tr>
+      <tr><td>--bb-charcoal</td><td>#1A1A1A</td><td>Card/surface background</td></tr>
+      <tr><td>--bb-dark-gray</td><td>#2A2A2A</td><td>Tertiary surface</td></tr>
+      <tr><td>--bb-brass</td><td>#C5A55A</td><td>Primary accent (scales, headings, CTAs)</td></tr>
+      <tr><td>--bb-brass-light</td><td>#D4B96E</td><td>Hover states, highlights</td></tr>
+      <tr><td>--bb-brass-dark</td><td>#A68B3E</td><td>Borders, subtle accents</td></tr>
+      <tr><td>--bb-warm-white</td><td>#F5F0E8</td><td>Primary text on dark</td></tr>
+      <tr><td>--bb-steel</td><td>#8A8A8A</td><td>Secondary text, body copy</td></tr>
+      <tr><td>--bb-red</td><td>#8B1A1A</td><td>Alerts, redaction marks, confidential labels</td></tr>
+      <tr><td>--bb-font-display</td><td>Bold Condensed Sans-Serif, 900wt</td><td>"BLACKBAR" wordmark</td></tr>
+      <tr><td>--bb-font-tagline</td><td>Semibold Sans-Serif, 600wt</td><td>"SAVAGE WINS" and taglines</td></tr>
+      <tr><td>--bb-font-body</td><td>Regular Sans-Serif, 400wt</td><td>Report text, descriptions</td></tr>
+      <tr><td>--bb-spacing-display</td><td>8–12px letter-spacing</td><td>Display type</td></tr>
+      <tr><td>--bb-spacing-tagline</td><td>4–6px letter-spacing</td><td>Tagline type</td></tr>
+      <tr><td>--bb-spacing-body</td><td>0–1px letter-spacing</td><td>Body type</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="divider"></div>
+
+<div class="footer">
+  <p>BLACKBAR &bull; BRAND IDENTITY PACKAGE &bull; V2.0 &bull; SWAINSTON CONSULTING GROUP &bull; MARCH 2026</p>
+  <p style="margin-top: 8px; color: var(--brass-dark);">SAVAGE WINS &bull; REDACT THE NOISE. EXTRACT THE TRUTH.</p>
+</div>
+
+</body>
+</html>

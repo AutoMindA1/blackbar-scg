@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Confidential case files — privileged work product
+Cases/
+benchmarks/
+
+# Editor
+*.swp
+*.swo
+*~

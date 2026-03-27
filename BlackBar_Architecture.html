@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlackBar — Architecture Design Document</title>
+<style>
+  :root {
+    --ink:       #1a1a2e;
+    --accent:    #1b3a6b;
+    --rule:      #2d5a9e;
+    --highlight: #e8f0fb;
+    --muted:     #6b7280;
+    --border:    #cbd5e1;
+    --warn:      #7c3300;
+    --warn-bg:   #fff7ed;
+    --ok:        #14532d;
+    --ok-bg:     #f0fdf4;
+    --code-bg:   #f1f5f9;
+    --white:     #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Georgia", "Times New Roman", serif;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--ink);
+    background: #f8f9fc;
+    padding: 0;
+  }
+
+  /* ── Cover ── */
+  .cover {
+    background: var(--accent);
+    color: var(--white);
+    padding: 64px 80px 56px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::after {
+    content: "";
+    position: absolute;
+    right: -60px;
+    top: -60px;
+    width: 360px;
+    height: 360px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  .cover-tag {
+    font-family: "Arial", sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 20px;
+  }
+  .cover h1 {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  .cover-sub {
+    font-size: 17px;
+    color: rgba(255,255,255,0.78);
+    margin-bottom: 36px;
+    font-style: italic;
+  }
+  .cover-meta {
+    font-family: "Arial", sans-serif;
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.60);
+    border-top: 1px solid rgba(255,255,255,0.18);
+    padding-top: 18px;
+    display: flex;
+    gap: 40px;
+  }
+  .cover-meta span strong { color: rgba(255,255,255,0.85); display: block; margin-bottom: 2px; }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 40px 80px;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 28px 36px;
+    margin: 40px 0;
+  }
+  .toc h2 {
+    font-family: "Arial", sans-serif;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .toc ol {
+    list-style: none;
+    counter-reset: toc;
+    column-count: 2;
+    column-gap: 40px;
+  }
+  .toc li {
+    counter-increment: toc;
+    font-family: "Arial", sans-serif;
+    font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px dotted var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .toc li::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--rule);
+    font-weight: 700;
+    min-width: 22px;
+  }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--rule); }
+
+  /* ── Section headers ── */
+  .section {
+    margin-top: 52px;
+  }
+  .section-label {
+    font-family: "Arial", sans-serif;
+    font-size: 10.5px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--rule);
+    margin-bottom: 8px;
+  }
+  h2.section-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+    border-bottom: 2.5px solid var(--rule);
+    padding-bottom: 10px;
+    margin-bottom: 22px;
+    line-height: 1.25;
+  }
+  h3 {
+    font-size: 17px;
+    color: var(--accent);
+    margin: 28px 0 10px;
+    font-family: "Arial", sans-serif;
+  }
+  h4 {
+    font-size: 14px;
+    color: var(--ink);
+    font-family: "Arial", sans-serif;
+    margin: 20px 0 8px;
+    font-weight: 700;
+  }
+
+  p { margin-bottom: 14px; }
+
+  /* ── Callouts ── */
+  .callout {
+    border-left: 4px solid var(--rule);
+    background: var(--highlight);
+    padding: 16px 20px;
+    border-radius: 0 4px 4px 0;
+    margin: 20px 0;
+    font-size: 14px;
+  }
+  .callout.warn {
+    border-color: #c2410c;
+    background: var(--warn-bg);
+    color: var(--warn);
+  }
+  .callout.ok {
+    border-color: #16a34a;
+    background: var(--ok-bg);
+    color: var(--ok);
+  }
+  .callout strong { display: block; margin-bottom: 4px; font-family: "Arial", sans-serif; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  /* ── Agent cards ── */
+  .agent-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 24px 0;
+  }
+  @media (max-width: 700px) { .agent-grid { grid-template-columns: 1fr; } }
+
+  .agent-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .agent-card.full { grid-column: 1 / -1; }
+  .agent-header {
+    background: var(--accent);
+    color: var(--white);
+    padding: 14px 18px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .agent-num {
+    background: rgba(255,255,255,0.20);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Arial", sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .agent-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .agent-role {
+    font-size: 11px;
+    color: rgba(255,255,255,0.65);
+    font-family: "Arial", sans-serif;
+  }
+  .agent-body { padding: 16px 18px; }
+  .agent-body p { font-size: 13.5px; margin-bottom: 10px; }
+  .field-label {
+    font-family: "Arial", sans-serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+    margin-top: 14px;
+  }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .pill {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-family: "Arial", sans-serif;
+    font-size: 11.5px;
+    color: var(--ink);
+  }
+  .pill.accent { background: var(--highlight); border-color: #93c5fd; color: var(--accent); }
+
+  /* ── Workflow sequence ── */
+  .workflow-step {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 6px;
+    align-items: flex-start;
+  }
+  .step-num {
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Arial", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-connector {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 0;
+    padding-left: 15px;
+  }
+  .step-connector .line {
+    width: 1px;
+    background: var(--border);
+    margin: 0 0 0 0;
+    height: 24px;
+    align-self: center;
+  }
+  .step-body { flex: 1; padding-bottom: 16px; }
+  .step-body h4 { margin-top: 0; margin-bottom: 6px; }
+  .step-body p { font-size: 13.5px; margin-bottom: 6px; }
+  .step-agent-tag {
+    display: inline-block;
+    background: var(--highlight);
+    border: 1px solid #93c5fd;
+    border-radius: 3px;
+    font-family: "Arial", sans-serif;
+    font-size: 10.5px;
+    color: var(--rule);
+    padding: 1px 7px;
+    margin-bottom: 6px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .step-agent-tag.human { background: #fef9c3; border-color: #fbbf24; color: #78350f; }
+  .checkpoint-bar {
+    background: #fef9c3;
+    border: 1px solid #fbbf24;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-family: "Arial", sans-serif;
+    font-size: 12.5px;
+    color: #78350f;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .checkpoint-bar::before { content: "⏸"; font-size: 14px; }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 18px 0;
+  }
+  thead tr { background: var(--accent); color: white; }
+  thead th {
+    font-family: "Arial", sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+  }
+  tbody tr:nth-child(even) { background: var(--highlight); }
+  tbody tr:nth-child(odd) { background: var(--white); }
+  td { padding: 9px 14px; vertical-align: top; border-bottom: 1px solid var(--border); }
+  td:first-child { font-weight: 600; font-family: "Arial", sans-serif; }
+
+  /* ── Code ── */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-family: "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin: 16px 0;
+    white-space: pre;
+  }
+  code {
+    font-family: "Courier New", monospace;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 12.5px;
+  }
+
+  /* ── Postpone list ── */
+  .postpone-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+    font-size: 13.5px;
+  }
+  .postpone-item:last-child { border-bottom: none; }
+  .postpone-item .x {
+    color: #dc2626;
+    font-weight: 700;
+    font-family: "Arial", sans-serif;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .postpone-reason { color: var(--muted); font-size: 12.5px; font-style: italic; }
+
+  /* ── Example matter ── */
+  .matter-box {
+    background: var(--white);
+    border: 2px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 24px 0;
+  }
+  .matter-header {
+    background: var(--rule);
+    color: white;
+    padding: 12px 20px;
+    font-family: "Arial", sans-serif;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .matter-body { padding: 20px 24px; }
+  .matter-row {
+    display: flex;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+  .matter-row:last-child { border-bottom: none; }
+  .matter-label {
+    font-family: "Arial", sans-serif;
+    font-size: 11.5px;
+    color: var(--muted);
+    min-width: 120px;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+
+  /* ── Final rec box ── */
+  .final-rec {
+    background: var(--accent);
+    color: white;
+    border-radius: 8px;
+    padding: 32px 36px;
+    margin-top: 40px;
+  }
+  .final-rec h3 { color: rgba(255,255,255,0.9); border: none; margin-top: 0; }
+  .final-rec p { color: rgba(255,255,255,0.80); font-size: 14px; }
+  .final-rec ul { color: rgba(255,255,255,0.80); font-size: 14px; padding-left: 20px; }
+  .final-rec li { margin-bottom: 6px; }
+
+  /* ── File tree ── */
+  .file-tree {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-family: "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.8;
+  }
+  .ft-dir { color: var(--accent); font-weight: 700; }
+  .ft-file { color: var(--muted); }
+  .ft-comment { color: #9ca3af; font-style: italic; }
+
+  /* ── Print ── */
+  @media print {
+    body { background: white; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ COVER ════ -->
+<div class="cover">
+  <div class="cover-tag">Architecture Design Document · v1.0</div>
+  <h1>BlackBar</h1>
+  <div class="cover-sub">AI-Assisted Expert Report System for SCG<br>Built on Claude Code with Agent Teams</div>
+  <div class="cover-meta">
+    <span><strong>Status</strong>MVP / First Production Version</span>
+    <span><strong>Agents</strong>4 (+ Orchestrator)</span>
+    <span><strong>Platform</strong>Claude Code · Agent Teams</span>
+    <span><strong>Date</strong>March 2026</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ═══════════════════════════════════════════ TOC ════ -->
+<div class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#framing">Problem Framing</a></li>
+    <li><a href="#architecture">Simplest Recommended Architecture</a></li>
+    <li><a href="#agents">Agent Team Design</a></li>
+    <li><a href="#workflow">Workflow Sequence</a></li>
+    <li><a href="#voice">Voice Preservation Strategy</a></li>
+    <li><a href="#guardrails">Guardrails &amp; QA</a></li>
+    <li><a href="#postpone">What to Postpone</a></li>
+    <li><a href="#example">Example Matter: Harrison v. Ridgeline</a></li>
+    <li><a href="#final">Final Recommendation</a></li>
+  </ol>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ 01 ════ -->
+<div class="section" id="framing">
+  <div class="section-label">Section 01</div>
+  <h2 class="section-title">Problem Framing</h2>
+
+  <h3>Core Use Case</h3>
+  <p>SCG's Senior Expert produces high-stakes legal work product — initial expert reports, deposition summaries, opposing expert rebuttal analyses, and governing code/standards compilations — in a specific, disciplined voice developed over years of practice. The labor bottleneck is not the judgment; it is the mechanical production work that must precede it: ingesting discovery documents, extracting key facts from depositions, locating and organizing applicable codes, and assembling a credible first draft. BlackBar offloads that bottleneck to an AI agent team so the Senior Expert can spend time on analysis, not assembly.</p>
+
+  <h3>Primary Users</h3>
+  <table>
+    <thead><tr><th>User</th><th>Role in the System</th><th>Interaction Mode</th></tr></thead>
+    <tbody>
+      <tr><td>Senior Expert</td><td>Owner. Defines voice, approves output, signs reports.</td><td>CLI commands + file review + approval prompts</td></tr>
+      <tr><td>Case Staff</td><td>Matter setup, document uploads, running intake.</td><td>CLI + file drop to matter folder</td></tr>
+      <tr><td>Client / Counsel</td><td>Receives final output only. No system access.</td><td>Delivered .docx or PDF via Clio</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Success Criteria</h3>
+  <div class="callout ok">
+    <strong>Must achieve in v1</strong>
+    A first draft of any standard deliverable (report section, deposition summary, opposing expert analysis) reaches the Senior Expert in less than 30 minutes from document upload — with every factual claim traceable to a source file and line, every code citation verified against the loaded standard, and the draft voice indistinguishable from the Senior Expert's own prior work on first read.
+  </div>
+  <p>Secondary criteria: no matter content ever leaves local file storage without explicit export, every draft version is retained, and every human approval is logged.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ 02 ════ -->
+<div class="section" id="architecture">
+  <div class="section-label">Section 02</div>
+  <h2 class="section-title">Simplest Recommended Architecture</h2>
+
+  <h3>The One-Sentence Architecture</h3>
+  <p>A Claude Code orchestrator session calls four specialized subagents in sequence — Intake, Research, Drafting, and QA — using local markdown files as shared memory, with a human approval checkpoint before any output leaves the system.</p>
+
+  <h3>Why This Is Sufficient</h3>
+  <p>SCG matters are sequential in nature: you intake, then research, then draft, then review. There is no need for parallel execution, a message queue, a vector database, or a web API in the first version. The document volumes per matter are in the tens to low hundreds of files — well within what file-based retrieval handles without infrastructure complexity. The agent count stays at four because each boundary maps to a genuine role change: document processor → analyst → writer → reviewer. Adding agents beyond these four would split work without adding capability.</p>
+
+  <div class="callout">
+    <strong>Guiding principle</strong>
+    Every component must justify its existence by either (a) producing a distinct artifact the Senior Expert can inspect, or (b) enforcing a hard constraint (confidentiality, citation traceability, voice fidelity) that the prior agent cannot self-enforce. If a proposed component does neither, it does not ship in v1.
+  </div>
+
+  <h3>Storage Pattern</h3>
+  <p>All matter content lives in a structured local folder hierarchy. No cloud database, no vector store, no external API calls for matter data. Retrieval is file read + grep. This is intentional: it keeps the system auditable, discoverable by opposing counsel only if exported, and trivially backed up.</p>
+
+  <div class="file-tree">
+<span class="ft-dir">/blackbar/</span>
+├── <span class="ft-dir">global/</span>
+│   ├── <span class="ft-file">VOICE.md</span>          <span class="ft-comment"># Senior Expert's writing profile (the single most important file)</span>
+│   ├── <span class="ft-dir">templates/</span>        <span class="ft-comment"># Report structure templates by type</span>
+│   └── <span class="ft-dir">examples/</span>          <span class="ft-comment"># 3–5 sanitized prior reports as few-shot references</span>
+│
+├── <span class="ft-dir">matters/</span>
+│   └── <span class="ft-dir">[MATTER-ID]/</span>       <span class="ft-comment"># e.g., SCG-2026-014</span>
+│       ├── <span class="ft-file">MATTER.md</span>      <span class="ft-comment"># Master context: parties, scope, deadlines, key facts</span>
+│       ├── <span class="ft-dir">docs/</span>           <span class="ft-comment"># Raw ingested documents (depositions, contracts, reports, photos)</span>
+│       ├── <span class="ft-dir">standards/</span>      <span class="ft-comment"># Building codes, development codes, consensus standards for this matter</span>
+│       ├── <span class="ft-dir">research/</span>       <span class="ft-comment"># Research outputs: depo summaries, opposing expert analysis, code extracts</span>
+│       ├── <span class="ft-dir">drafts/</span>         <span class="ft-comment"># Versioned drafts: draft_v01.md, draft_v02.md, etc.</span>
+│       ├── <span class="ft-dir">approved/</span>       <span class="ft-comment"># Final approved output ready for export</span>
+│       └── <span class="ft-file">APPROVAL_LOG.md</span> <span class="ft-comment"># Timestamped record of every human approval action</span>
+│
+└── <span class="ft-dir">agents/</span>
+    ├── <span class="ft-file">CLAUDE.md</span>          <span class="ft-comment"># Global orchestrator context (loaded automatically by Claude Code)</span>
+    ├── <span class="ft-file">intake.md</span>          <span class="ft-comment"># Intake agent system prompt</span>
+    ├── <span class="ft-file">research.md</span>        <span class="ft-comment"># Research agent system prompt</span>
+    ├── <span class="ft-file">drafting.md</span>        <span class="ft-comment"># Drafting agent system prompt</span>
+    └── <span class="ft-file">qa.md</span>              <span class="ft-comment"># QA agent system prompt</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ 03 ════ -->
+<div class="section" id="agents">
+  <div class="section-label">Section 03</div>
+  <h2 class="section-title">Agent Team Design</h2>
+  <p>Four agents, each with a single clear responsibility. The main Claude Code session acts as the orchestrator — it does not produce work product itself; it sequences agents, manages human checkpoints, and handles handoff logic.</p>
+
+  <div class="agent-grid">
+
+    <!-- Agent 1 -->
+    <div class="agent-card">
+      <div class="agent-header">
+        <div class="agent-num">1</div>
+        <div>
+          <div class="agent-title">Intake Agent</div>
+          <div class="agent-role">Matter Setup &amp; Document Ingestion</div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <p>Receives raw matter materials, classifies every document, extracts key structured facts, and writes the master <code>MATTER.md</code> context file. This is the only agent that touches raw unprocessed input.</p>
+
+        <div class="field-label">Purpose</div>
+        <p>Transform a folder of heterogeneous documents into a clean, structured matter brief that every downstream agent can trust.</p>
+
+        <div class="field-label">Inputs</div>
+        <div class="pill-row">
+          <span class="pill">Retainer / engagement letter</span>
+          <span class="pill">Complaint / petition</span>
+          <span class="pill">Client brief</span>
+          <span class="pill">Deposition transcripts</span>
+          <span class="pill">Contracts &amp; incident reports</span>
+          <span class="pill">Opposing expert reports</span>
+          <span class="pill">Photographs / site imagery</span>
+          <span class="pill">Construction / permit docs</span>
+        </div>
+
+        <div class="field-label">Outputs</div>
+        <div class="pill-row">
+          <span class="pill accent">MATTER.md</span>
+          <span class="pill accent">Document index (type, filename, brief description)</span>
+          <span class="pill accent">Preliminary scope summary</span>
+        </div>
+
+        <div class="field-label">Tools</div>
+        <div class="pill-row">
+          <span class="pill">Read</span>
+          <span class="pill">Write</span>
+          <span class="pill">Bash (text extraction)</span>
+          <span class="pill">Glob</span>
+        </div>
+
+        <div class="field-label">Memory / Context</div>
+        <p>Reads global <code>VOICE.md</code> only to understand SCG's preferred terminology. Writes all outputs to <code>/matters/[ID]/</code>. No access to other matter folders.</p>
+
+        <div class="field-label">Handoff Rule</div>
+        <p>Completes when <code>MATTER.md</code> is written and the document index is populated. Triggers human checkpoint #1. Does not proceed to Research until the Senior Expert confirms scope.</p>
+      </div>
+    </div>
+
+    <!-- Agent 2 -->
+    <div class="agent-card">
+      <div class="agent-header">
+        <div class="agent-num">2</div>
+        <div>
+          <div class="agent-title">Research Agent</div>
+          <div class="agent-role">Analysis, Extraction &amp; Standards Compilation</div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <p>The deep reader. Given specific research tasks from the orchestrator, it extracts structured facts from depositions, deconstructs opposing expert methodology, and identifies applicable code and standards provisions — with pinpoint source citations on every finding.</p>
+
+        <div class="field-label">Purpose</div>
+        <p>Produce a research package that makes the Drafting Agent's job a matter of organizing and writing, not searching and verifying.</p>
+
+        <div class="field-label">Inputs</div>
+        <div class="pill-row">
+          <span class="pill">MATTER.md</span>
+          <span class="pill">Document index</span>
+          <span class="pill">Specific research queries (from orchestrator)</span>
+          <span class="pill">Raw docs in /docs/ and /standards/</span>
+        </div>
+
+        <div class="field-label">Outputs</div>
+        <div class="pill-row">
+          <span class="pill accent">Deposition summary (structured, page-line cited)</span>
+          <span class="pill accent">Opposing expert analysis brief</span>
+          <span class="pill accent">Applicable standards extract</span>
+          <span class="pill accent">Citation registry (source → claim map)</span>
+        </div>
+
+        <div class="field-label">Tools</div>
+        <div class="pill-row">
+          <span class="pill">Read</span>
+          <span class="pill">Grep</span>
+          <span class="pill">Write</span>
+          <span class="pill">Bash (PDF text extraction)</span>
+        </div>
+
+        <div class="field-label">Memory / Context</div>
+        <p>Reads <code>MATTER.md</code> and all files in the matter's <code>/docs/</code> and <code>/standards/</code> folders. Writes to <code>/research/</code>. No write access to drafts.</p>
+
+        <div class="field-label">Handoff Rule</div>
+        <p>Completes when all requested research tasks have corresponding output files in <code>/research/</code>. Triggers human checkpoint #2. Does not draft — its output is exclusively factual extraction and analysis framing.</p>
+      </div>
+    </div>
+
+    <!-- Agent 3 -->
+    <div class="agent-card">
+      <div class="agent-header">
+        <div class="agent-num">3</div>
+        <div>
+          <div class="agent-title">Drafting Agent</div>
+          <div class="agent-role">Work Product Generation in Senior Expert's Voice</div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <p>The writer. Consumes the research package and produces a complete first draft of the requested deliverable — initial report, rebuttal section, or deposition summary — structured exactly as the Senior Expert would write it, in their voice.</p>
+
+        <div class="field-label">Purpose</div>
+        <p>Produce a draft that requires refinement and expert judgment, not reconstruction. The Senior Expert should recognize their own voice and structure immediately.</p>
+
+        <div class="field-label">Inputs</div>
+        <div class="pill-row">
+          <span class="pill">Research package from /research/</span>
+          <span class="pill">VOICE.md</span>
+          <span class="pill">Applicable template from /global/templates/</span>
+          <span class="pill">1–2 example reports from /global/examples/</span>
+          <span class="pill">Drafting task spec (from orchestrator)</span>
+        </div>
+
+        <div class="field-label">Outputs</div>
+        <div class="pill-row">
+          <span class="pill accent">draft_v01.md in /drafts/</span>
+          <span class="pill accent">Inline citation tags [SOURCE: filename, p.X]</span>
+          <span class="pill accent">Draft cover page and section headers</span>
+          <span class="pill accent">Placeholder flags for Senior Expert judgment calls</span>
+        </div>
+
+        <div class="field-label">Tools</div>
+        <div class="pill-row">
+          <span class="pill">Read</span>
+          <span class="pill">Write</span>
+        </div>
+
+        <div class="field-label">Memory / Context</div>
+        <p>Reads <code>VOICE.md</code>, applicable template, 1–2 example reports, and all files in <code>/research/</code>. Writes only to <code>/drafts/</code>. Never accesses raw source documents directly — all factual grounding comes pre-processed from Research.</p>
+
+        <div class="field-label">Handoff Rule</div>
+        <p>Completes when a full draft is written to <code>draft_v01.md</code>. All unresolvable judgment calls are flagged inline with <code>[EXPERT JUDGMENT REQUIRED: ...]</code>. Passes draft to QA Agent automatically.</p>
+      </div>
+    </div>
+
+    <!-- Agent 4 -->
+    <div class="agent-card">
+      <div class="agent-header">
+        <div class="agent-num">4</div>
+        <div>
+          <div class="agent-title">QA Agent</div>
+          <div class="agent-role">Citation Verification, Voice Check &amp; Approval Prep</div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <p>The final gate before human review. Verifies every factual claim in the draft against the source documents in the citation registry, checks voice consistency against <code>VOICE.md</code>, flags anything unverifiable, and produces a structured QA report for the Senior Expert.</p>
+
+        <div class="field-label">Purpose</div>
+        <p>Ensure the Senior Expert never receives a draft with an unsupported fact or an inconsistent voice pass. Every flag is actionable, not generic.</p>
+
+        <div class="field-label">Inputs</div>
+        <div class="pill-row">
+          <span class="pill">draft_v01.md</span>
+          <span class="pill">Citation registry</span>
+          <span class="pill">All source documents</span>
+          <span class="pill">VOICE.md</span>
+        </div>
+
+        <div class="field-label">Outputs</div>
+        <div class="pill-row">
+          <span class="pill accent">QA_REPORT.md (pass/flag/fail per claim)</span>
+          <span class="pill accent">Annotated draft with inline flags</span>
+          <span class="pill accent">Summary: N claims verified, M flagged, P unresolvable</span>
+        </div>
+
+        <div class="field-label">Tools</div>
+        <div class="pill-row">
+          <span class="pill">Read</span>
+          <span class="pill">Grep</span>
+          <span class="pill">Write</span>
+        </div>
+
+        <div class="field-label">Memory / Context</div>
+        <p>Full read access to the matter folder. Write access only to <code>/research/QA_REPORT.md</code> and the annotated draft copy. Never modifies the original draft.</p>
+
+        <div class="field-label">Handoff Rule</div>
+        <p>Triggers human checkpoint #3. The Senior Expert reviews the annotated draft alongside the QA report, makes edits, and issues an explicit approval command. Only after approval does the orchestrator write to <code>/approved/</code> and log the event in <code>APPROVAL_LOG.md</code>.</p>
+      </div>
+    </div>
+
+  </div><!-- /agent-grid -->
+</div>
+
+
+<!-- ═══════════════════════════════════════════ 04 ════ -->
+<div class="section" id="workflow">
+  <div class="section-label">Section 04</div>
+  <h2 class="section-title">Workflow Sequence</h2>
+  <p>Twelve steps from matter intake to approved output. Steps marked with a human pause icon require explicit Senior Expert action before the orchestrator continues.</p>
+
+  <!-- Step 1 -->
+  <div class="workflow-step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-agent-tag">CASE STAFF</div>
+      <h4>Matter Folder Created</h4>
+      <p>Case staff creates a new matter directory using the standard naming convention (<code>SCG-YYYY-NNN</code>) and drops all available documents — retainer, complaint, depositions, opposing expert reports, relevant building codes, photographs — into <code>/docs/</code> and <code>/standards/</code> respectively. No renaming or pre-processing required.</p>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="workflow-step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-agent-tag">ORCHESTRATOR</div>
+      <h4>Matter Initialization</h4>
+      <p>Senior Expert (or staff) runs: <code>blackbar intake SCG-2026-014</code>. The orchestrator spins up the Intake Agent, passes the matter folder path, and instructs it to produce <code>MATTER.md</code> and the document index.</p>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="workflow-step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-agent-tag">INTAKE AGENT</div>
+      <h4>Document Ingestion &amp; Matter Brief</h4>
+      <p>Intake Agent reads and classifies every file: extracts parties, alleged code violations, key dates, assignment scope, and outstanding unknowns. Writes structured <code>MATTER.md</code>. Flags any documents it cannot parse.</p>
+    </div>
+  </div>
+
+  <!-- Checkpoint 1 -->
+  <div class="workflow-step">
+    <div class="step-num" style="background:#b45309">✓</div>
+    <div class="step-body">
+      <div class="step-agent-tag human">HUMAN CHECKPOINT #1 — Scope Confirmation</div>
+      <div class="checkpoint-bar">Senior Expert reviews MATTER.md. Confirms scope, adds any missing context, explicitly approves to proceed. Required before Research begins.</div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="workflow-step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-agent-tag">ORCHESTRATOR</div>
+      <h4>Research Task Generation</h4>
+      <p>Based on confirmed <code>MATTER.md</code> and deliverable type (initial report / rebuttal / deposition summary), the orchestrator generates a specific research task list and passes it to the Research Agent. Task list is written to <code>MATTER.md</code> as a logged record.</p>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="workflow-step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-agent-tag">RESEARCH AGENT</div>
+      <h4>Deposition Extraction</h4>
+      <p>For each deposition transcript, Research Agent extracts: key admissions, contradictions, relevant testimony by topic, and page/line citations. Outputs structured summary to <code>/research/depo_[witness]_summary.md</code>.</p>
+    </div>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="workflow-step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <div class="step-agent-tag">RESEARCH AGENT</div>
+      <h4>Opposing Expert Analysis</h4>
+      <p>For each opposing expert report, Research Agent extracts: stated opinions, methodology, code citations used, logical dependencies, and identifiable gaps or vulnerabilities. Outputs to <code>/research/opposing_expert_[name]_analysis.md</code> with every claim mapped back to a page and paragraph in the source report.</p>
+    </div>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="workflow-step">
+    <div class="step-num">7</div>
+    <div class="step-body">
+      <div class="step-agent-tag">RESEARCH AGENT</div>
+      <h4>Code &amp; Standards Compilation</h4>
+      <p>Identifies the applicable edition of each referenced building code, development code, or consensus standard. Extracts the specific sections at issue. Cross-references permit date with code edition in force at time of construction. Outputs citation registry to <code>/research/citation_registry.md</code>.</p>
+    </div>
+  </div>
+
+  <!-- Checkpoint 2 -->
+  <div class="workflow-step">
+    <div class="step-num" style="background:#b45309">✓</div>
+    <div class="step-body">
+      <div class="step-agent-tag human">HUMAN CHECKPOINT #2 — Research Review</div>
+      <div class="checkpoint-bar">Senior Expert reviews research outputs. Confirms the factual extraction is accurate and complete. May add supplemental context. Approves to proceed to drafting.</div>
+    </div>
+  </div>
+
+  <!-- Step 8 -->
+  <div class="workflow-step">
+    <div class="step-num">8</div>
+    <div class="step-body">
+      <div class="step-agent-tag">ORCHESTRATOR</div>
+      <h4>Drafting Task Spec</h4>
+      <p>Orchestrator composes a precise drafting instruction: deliverable type, section order from the applicable template, tone register (rebuttal vs. primary opinion), any specific arguments the Senior Expert flagged in research review, and the target length range.</p>
+    </div>
+  </div>
+
+  <!-- Step 9 -->
+  <div class="workflow-step">
+    <div class="step-num">9</div>
+    <div class="step-body">
+      <div class="step-agent-tag">DRAFTING AGENT</div>
+      <h4>First Draft Generation</h4>
+      <p>Drafting Agent loads <code>VOICE.md</code>, the applicable template, one or two example reports, and the complete research package. Produces <code>draft_v01.md</code> with inline citation tags, structured exactly as the Senior Expert would produce it. Every claim that requires expert judgment is flagged explicitly rather than fabricated.</p>
+    </div>
+  </div>
+
+  <!-- Step 10 -->
+  <div class="workflow-step">
+    <div class="step-num">10</div>
+    <div class="step-body">
+      <div class="step-agent-tag">QA AGENT</div>
+      <h4>Citation Verification &amp; Voice Check</h4>
+      <p>QA Agent verifies every factual claim in the draft against source documents. Checks that each code citation matches the loaded text of the standard. Scores voice consistency against <code>VOICE.md</code>. Produces <code>QA_REPORT.md</code> and an annotated draft copy.</p>
+    </div>
+  </div>
+
+  <!-- Checkpoint 3 -->
+  <div class="workflow-step">
+    <div class="step-num" style="background:#b45309">✓</div>
+    <div class="step-body">
+      <div class="step-agent-tag human">HUMAN CHECKPOINT #3 — Senior Expert Review &amp; Approval</div>
+      <div class="checkpoint-bar">Senior Expert reviews annotated draft alongside QA report. Makes edits directly in the draft file. Runs <code>blackbar approve SCG-2026-014 v01</code>. Orchestrator copies approved version to /approved/, logs timestamp and approver in APPROVAL_LOG.md. Work product is now export-ready.</div>
+    </div>
+  </div>
+
+  <!-- Step 11 -->
+  <div class="workflow-step">
+    <div class="step-num">11</div>
+    <div class="step-body">
+      <div class="step-agent-tag">ORCHESTRATOR</div>
+      <h4>Export &amp; Clio Handoff</h4>
+      <p>On export command, orchestrator converts the approved markdown to the appropriate output format (Word .docx for counsel, PDF for submission). Optionally generates a cover memo. Export is a deliberate manual step — nothing leaves the matter folder automatically.</p>
+    </div>
+  </div>
+
+  <!-- Step 12 -->
+  <div class="workflow-step">
+    <div class="step-num">12</div>
+    <div class="step-body">
+      <div class="step-agent-tag">CASE STAFF</div>
+      <h4>Matter Close &amp; Archive</h4>
+      <p>After matter completion, case staff runs <code>blackbar archive SCG-2026-014</code>. Orchestrator writes a final <code>LESSONS.md</code> file (what worked, what flagged, what to improve) and moves the matter folder to the archive directory. The voice examples library is optionally updated with a sanitized excerpt from this matter's approved output.</p>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════ 05 ════ -->
+<div class="section" id="voice">
+  <div class="section-label">Section 05</div>
+  <h2 class="section-title">Voice Preservation Strategy</h2>
+
+  <h3>The VOICE.md File (Most Critical Artifact)</h3>
+  <p><code>VOICE.md</code> is a living document maintained by the Senior Expert. It is the single most important file in the system. It is not a style guide — it is a behavioral profile written in first person that the Drafting Agent uses as a continuous reference while writing.</p>
+
+  <p>It contains six sections:</p>
+
+  <table>
+    <thead><tr><th>Section</th><th>What It Captures</th><th>Example Entry</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Reasoning Structure</td>
+        <td>How the Expert moves from facts to conclusions. The sequence of argument construction.</td>
+        <td>"I always establish what the applicable standard required at the time of construction before addressing what was built. Never reverse this order."</td>
+      </tr>
+      <tr>
+        <td>Preferred Phrasing</td>
+        <td>Recurrent phrases, preferred verbs, sentence openings the Expert uses.</td>
+        <td>"I use 'the evidence establishes' not 'it appears that.' I use 'the 2018 IBC requires' not 'the code says.'"</td>
+      </tr>
+      <tr>
+        <td>Report Structure</td>
+        <td>Required section order, section titles, what goes in each section.</td>
+        <td>"Assignment section always precedes Documents Reviewed. Opinions are stated at the end, not introduced early."</td>
+      </tr>
+      <tr>
+        <td>Citation Discipline</td>
+        <td>How sources are cited inline and in a references section. Format by document type.</td>
+        <td>"Depositions: [Witness Last Name Depo., p. X, l. Y]. Codes: [IBC 2018 § X.X.X]. Expert reports: [Smith Report, p. X, ¶ Y]."</td>
+      </tr>
+      <tr>
+        <td>Prohibitions</td>
+        <td>Things the Expert never writes.</td>
+        <td>"Never use 'clearly' or 'obviously.' Never state a legal conclusion. Never use passive voice for opinions."</td>
+      </tr>
+      <tr>
+        <td>Judgment Flags</td>
+        <td>Classes of statements that must be flagged for Expert judgment, not drafted by AI.</td>
+        <td>"Any opinion about causation. Any quantification of damages. Any statement about what a party knew or intended."</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Few-Shot Examples</h3>
+  <p>The Drafting Agent loads one or two example reports from <code>/global/examples/</code> that most closely match the current deliverable type (rebuttal report vs. initial report, code compliance vs. causation analysis). These are sanitized prior reports with party names and case-specific details redacted. They serve as structural and voice anchors — not templates to fill in, but reference patterns to match.</p>
+
+  <h3>How Voice is Enforced at the QA Stage</h3>
+  <p>The QA Agent performs a voice consistency check against four specific criteria from <code>VOICE.md</code>: prohibited terms, citation format, section order, and reasoning sequence. Any deviation is flagged with a specific reference to the <code>VOICE.md</code> rule it violates. The QA Agent does not silently rewrite for voice — it flags and surfaces for human correction. This is intentional: voice refinement over multiple iterations teaches the system, while silent rewriting teaches nothing.</p>
+
+  <h3>Voice Improvement Loop</h3>
+  <p>After each matter closes, the Senior Expert spends fifteen minutes reviewing the QA flags and deciding whether any represent systematic gaps in <code>VOICE.md</code>. If so, they update the file directly. Over the first ten to fifteen matters, <code>VOICE.md</code> will become a precision instrument that requires very few corrections per draft.</p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ 06 ════ -->
+<div class="section" id="guardrails">
+  <div class="section-label">Section 06</div>
+  <h2 class="section-title">Guardrails &amp; QA</h2>
+
+  <h3>Confidentiality</h3>
+  <table>
+    <thead><tr><th>Risk</th><th>Control</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Matter content exposed to cloud LLM providers</td>
+        <td>BlackBar runs entirely on Claude Code locally. All file operations are local. No matter content is sent to any external API unless the Senior Expert explicitly uses a cloud-connected tool. Document this constraint prominently in the <code>CLAUDE.md</code> global context.</td>
+      </tr>
+      <tr>
+        <td>Cross-matter contamination</td>
+        <td>Each agent is instantiated with access scoped to a single matter folder. The orchestrator passes matter-specific paths — never the parent <code>/matters/</code> directory. Agents cannot glob across matters.</td>
+      </tr>
+      <tr>
+        <td>Inadvertent export before approval</td>
+        <td>The export command requires an approved version to exist in <code>/approved/</code>. The orchestrator checks this before running conversion. No unapproved draft can be exported by command — staff would have to manually copy files to bypass this.</td>
+      </tr>
+      <tr>
+        <td>Discovery risk from AI process artifacts</td>
+        <td>All draft files, QA reports, and research outputs are clearly labeled as attorney-work-product-adjacent. Consult with retained counsel on whether to apply work product labels. The system does not generate privilege logs — that is out of scope for v1.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Hallucination Control</h3>
+  <table>
+    <thead><tr><th>Layer</th><th>Mechanism</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Research → Drafting isolation</td>
+        <td>The Drafting Agent has no direct access to raw source documents. It can only use what the Research Agent extracted and placed in <code>/research/</code>. This limits the surface area for fabrication: the Drafting Agent cannot invent a deposition quote that was never extracted.</td>
+      </tr>
+      <tr>
+        <td>Inline citation requirement</td>
+        <td>The Drafting Agent's system prompt requires every factual claim to carry a <code>[SOURCE: filename, location]</code> tag. Any claim without a tag is automatically flagged by the QA Agent as unverifiable.</td>
+      </tr>
+      <tr>
+        <td>QA verification pass</td>
+        <td>The QA Agent independently reads the source documents and checks each tagged claim. It cannot verify claims that have no source tag, and it flags any tag that does not match the quoted or paraphrased content.</td>
+      </tr>
+      <tr>
+        <td>Expert judgment flags</td>
+        <td>The Drafting Agent is instructed to write <code>[EXPERT JUDGMENT REQUIRED: {description}]</code> in place of any opinion, causal inference, or damage quantification. These placeholders are never synthesized — they are always deferred to the Senior Expert.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Evidentiary Traceability</h3>
+  <p>The citation registry produced by the Research Agent is the evidentiary spine of every deliverable. It maps each factual claim to a specific source document, page, and location. This registry is retained in the matter folder permanently. If a claim in a final report is ever challenged in deposition or cross-examination, the Senior Expert can trace it back to the source in seconds. The registry is never deleted — it is part of the matter record.</p>
+
+  <h3>Version Control</h3>
+  <p>Draft files are never overwritten. Each revision cycle creates a new file: <code>draft_v01.md</code>, <code>draft_v02.md</code>, etc. The <code>APPROVAL_LOG.md</code> records which version was approved, by whom, and at what timestamp. The orchestrator enforces this — write operations to <code>/drafts/</code> always create new files with auto-incremented version numbers. Prior versions are read-only after a new version is created.</p>
+
+  <div class="callout warn">
+    <strong>Hard Constraint</strong>
+    The QA Agent must never achieve a "pass" status on any claim it cannot verify in the loaded source documents. A claim that cannot be verified must be flagged UNVERIFIABLE — not passed, not silently removed. The Senior Expert decides what to do with unverifiable claims. The system does not make that call.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ 07 ════ -->
+<div class="section" id="postpone">
+  <div class="section-label">Section 07</div>
+  <h2 class="section-title">What to Postpone</h2>
+  <p>The following capabilities are real and eventually valuable — but each adds architectural complexity that is not justified until the four-agent core is operating reliably across ten or more matters.</p>
+
+  <div class="postpone-item">
+    <span class="x">✗</span>
+    <div>
+      <strong>Vector database / semantic search</strong>
+      <div class="postpone-reason">File-based grep retrieval is sufficient for per-matter document volumes. A vector store adds infrastructure, maintenance, and a new failure mode. Revisit when a single matter routinely exceeds 200 documents or 500 pages of depositions.</div>
+    </div>
+  </div>
+
+  <div class="postpone-item">
+    <span class="x">✗</span>
+    <div>
+      <strong>Clio API integration</strong>
+      <div class="postpone-reason">Clio sync would automate matter creation and export. It also introduces an authenticated external dependency and a potential discovery surface. Manual export to Clio takes two minutes. Not worth the integration risk in v1.</div>
+    </div>
+  </div>
+
+  <div class="postpone-item">
+    <span class="x">✗</span>
+    <div>
+      <strong>Parallel agent execution</strong>
+      <div class="postpone-reason">Running Research sub-tasks in parallel (depositions, opposing expert, codes simultaneously) would cut processing time. The sequential model is simpler to debug and the time savings are modest relative to the added orchestration complexity in v1.</div>
+    </div>
+  </div>
+
+  <div class="postpone-item">
+    <span class="x">✗</span>
+    <div>
+      <strong>Web search / external legal database integration</strong>
+      <div class="postpone-reason">Connecting to Westlaw, ICC codes online, or ASTM portals adds authentication, rate limiting, and data provenance complexity. All standards should be loaded as local files in <code>/standards/</code> in v1.</div>
+    </div>
+  </div>
+
+  <div class="postpone-item">
+    <span class="x">✗</span>
+    <div>
+      <strong>Automated privilege logging</strong>
+      <div class="postpone-reason">Generating privilege logs and work product designations requires legal counsel input on applicable doctrine. Out of scope for an AI system to decide. Mark as a future integration with retained counsel's review process.</div>
+    </div>
+  </div>
+
+  <div class="postpone-item">
+    <span class="x">✗</span>
+    <div>
+      <strong>Multi-matter cross-referencing</strong>
+      <div class="postpone-reason">The ability to surface findings from prior similar matters is genuinely useful — especially for recurring opposing experts and recurring code sections. Build this after the per-matter workflow is stable, not before.</div>
+    </div>
+  </div>
+
+  <div class="postpone-item">
+    <span class="x">✗</span>
+    <div>
+      <strong>GUI / web interface</strong>
+      <div class="postpone-reason">The CLI is the interface in v1. The Senior Expert is a power user; a web UI adds front-end development scope that is not on the critical path to getting the drafting quality right.</div>
+    </div>
+  </div>
+
+  <div class="postpone-item">
+    <span class="x">✗</span>
+    <div>
+      <strong>Automated deposition question preparation</strong>
+      <div class="postpone-reason">A useful future capability: generating suggested deposition questions based on the opposing expert analysis. Depends on the Research Agent's opposing expert output being proven reliable first.</div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════ 08 ════ -->
+<div class="section" id="example">
+  <div class="section-label">Section 08</div>
+  <h2 class="section-title">Example Matter: Harrison v. Ridgeline Commercial</h2>
+
+  <div class="matter-box">
+    <div class="matter-header">Matter Brief — SCG-2026-014</div>
+    <div class="matter-body">
+      <div class="matter-row"><span class="matter-label">Matter ID</span>SCG-2026-014</div>
+      <div class="matter-row"><span class="matter-label">Client</span>Ridgeline Commercial Properties, LLC (Property Owner / Defendant)</div>
+      <div class="matter-row"><span class="matter-label">Claim</span>Plaintiff Harrison alleges a slip and fall on an exterior stair at Ridgeline's commercial building. Claims the handrail system was non-compliant with the IBC at time of construction, causing lack of adequate support during descent.</div>
+      <div class="matter-row"><span class="matter-label">Opposing Expert</span>Smith Engineering Associates — Report signed by Dr. A. Smith, PE. Opinion: the installed handrail violated IBC 2018 §1014 (graspability and height requirements).</div>
+      <div class="matter-row"><span class="matter-label">Assignment</span>Retained to rebut Smith's report. Analyze whether the handrail met the applicable code at the time the construction permit was issued (permit date: March 2019).</div>
+      <div class="matter-row"><span class="matter-label">Deliverable</span>Rebuttal Expert Report</div>
+      <div class="matter-row"><span class="matter-label">Deadline</span>45 days from retainer</div>
+    </div>
+  </div>
+
+  <h3>Flow Through the Architecture</h3>
+
+  <h4>Step 1–2 · Intake</h4>
+  <p>Case staff drops nine files into <code>/matters/SCG-2026-014/docs/</code>: retainer letter, complaint, Ridgeline's answer, Smith Engineering report, deposition of Harrison (208 pages), deposition of property manager Rodriguez (64 pages), site photographs (22 files), construction permit, and building inspection certificate. The IBC 2018 PDF is placed in <code>/standards/</code>.</p>
+  <p>The Intake Agent classifies all nine documents, extracts the parties, identifies the specific code sections Smith cited (§1014.3 graspability profile, §1014.4 height), notes the permit date, and writes <code>MATTER.md</code>. The document index lists all files with type and a one-sentence description. Intake flags one unknown: the architectural drawings referenced in the Smith report are not in the document set.</p>
+  <p><strong>Checkpoint #1:</strong> Senior Expert reviews MATTER.md, confirms scope, notes that architectural drawings should be requested, and approves to proceed. The missing drawings are logged as an open item in MATTER.md.</p>
+
+  <h4>Steps 4–7 · Research</h4>
+  <p>The orchestrator generates four research tasks: (1) summarize Harrison deposition for facts bearing on the incident and handrail interaction; (2) summarize Rodriguez deposition for property maintenance and construction history; (3) extract and analyze Smith's IBC citations and methodology; (4) pull the full text of IBC 2018 §1014 and identify the code in force in March 2019 by jurisdiction.</p>
+  <p>Research Agent outputs: <code>depo_harrison_summary.md</code> (Harrison testified he did not grip the handrail at all — flagged as significant); <code>depo_rodriguez_summary.md</code> (Rodriguez confirms handrail installed per approved drawings); <code>opposing_expert_smith_analysis.md</code> (Smith's graspability opinion relies on §1014.3 Table — Research Agent notes Smith cited the 2018 edition but the permit predates its adoption in this jurisdiction by 14 months); <code>citation_registry.md</code> (all source mappings). </p>
+  <p><strong>Checkpoint #2:</strong> Senior Expert reviews. Notes that the jurisdiction adoption date discrepancy is the core of the rebuttal. Approves research. Adds a note: "Lead with the edition-in-force argument. Smith's entire opinion collapses if the 2015 IBC applies."</p>
+
+  <h4>Steps 8–9 · Drafting</h4>
+  <p>The orchestrator spec instructs the Drafting Agent to produce a rebuttal report using the rebuttal template, leading with the code-edition-in-force argument, following the citation format in <code>VOICE.md</code>, and flagging the causation link between handrail geometry and the fall for Expert judgment. The Drafting Agent loads the rebuttal template, two prior rebuttal reports from <code>/global/examples/</code>, and writes <code>draft_v01.md</code>. The draft's Assignment section cites the retainer; the Documents Reviewed section lists all nine source documents; the Analysis section opens with the edition-in-force argument, citing [IBC 2018 Adoption History — Jurisdiction X, p.3] and [Harrison Permit, p.1]; the rebuttal of Smith's methodology follows; and the Opinions section contains three opinions and one <code>[EXPERT JUDGMENT REQUIRED: causation link between handrail geometry and plaintiff's fall mechanics]</code> placeholder.</p>
+
+  <h4>Step 10 · QA</h4>
+  <p>QA Agent verifies all 23 inline citations in the draft. 22 verify cleanly. One citation — a claim that "the 2015 IBC was adopted in [Jurisdiction X] effective January 2017" — cannot be verified against any loaded source document. QA flags it as UNVERIFIABLE. Voice check: two instances of "clearly" detected (prohibited per VOICE.md), flagged. Report structure check: section order matches rebuttal template.</p>
+  <p><strong>Checkpoint #3:</strong> Senior Expert reviews QA report and annotated draft. Fixes the two "clearly" instances. Looks up the jurisdiction adoption date, confirms it, and adds the source document to <code>/standards/</code>. Re-runs QA on that single claim (QA Agent can be invoked for spot checks). All claims now verified. Approves: <code>blackbar approve SCG-2026-014 v01</code>. Draft copied to <code>/approved/</code>, approval logged.</p>
+
+  <h4>Steps 11–12 · Export &amp; Archive</h4>
+  <p>Senior Expert runs export. System converts <code>draft_v01.md</code> to Word format. Senior Expert formats cover page, adds signature block, delivers to counsel via Clio. Matter archived on close. The pattern — opponent relied on wrong code edition — is noted in <code>LESSONS.md</code> as a recurring rebuttal pattern to watch for in future matters.</p>
+
+  <div class="callout ok">
+    <strong>Outcome</strong>
+    The Senior Expert spent time on two things: confirming scope, and the causation judgment call. Every other component — document ingestion, deposition extraction, code research, opposing expert deconstruction, first draft — was produced by the agent team. The critical insight (wrong code edition) was surfaced by Research, not stumbled on in the Senior Expert's own reading.
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════ 09 ════ -->
+<div class="section" id="final">
+  <div class="section-label">Section 09</div>
+  <h2 class="section-title">Final Recommendation</h2>
+
+  <div class="final-rec">
+    <h3>Build This First</h3>
+    <p>Start with the VOICE.md file and two to three sanitized example reports. This is the most important investment in the system and costs nothing but the Senior Expert's time. Every hour spent on VOICE.md returns multiples in reduced revision cycles on every matter that follows.</p>
+    <p>Then build the four agents in order: Intake first (simplest, most observable), Research second (highest value, most testable), Drafting third (most dependent on VOICE.md quality), QA last (requires the others to function to be useful).</p>
+    <p>Run three matters sequentially before adjusting anything. The first will reveal what VOICE.md is missing. The second will reveal what the citation registry needs. The third should produce a draft the Senior Expert considers genuinely useful as a starting point.</p>
+
+    <ul>
+      <li><strong>Week 1:</strong> Build VOICE.md, collect example reports, create folder structure, write agent system prompts.</li>
+      <li><strong>Week 2:</strong> Build and test Intake Agent on a closed matter with known documents.</li>
+      <li><strong>Week 3:</strong> Build and test Research Agent. Validate citation registry accuracy against source documents manually.</li>
+      <li><strong>Week 4:</strong> Build Drafting Agent. Run end-to-end on a closed matter. Compare output to the actual report filed.</li>
+      <li><strong>Week 5:</strong> Build QA Agent. Validate that every hallucination and voice deviation from Week 4's test is caught.</li>
+      <li><strong>Week 6–8:</strong> Run on first live matter. Refine VOICE.md after each checkpoint. Do not add features until the voice is right.</li>
+    </ul>
+
+    <p style="margin-top:16px; color:rgba(255,255,255,0.65); font-size: 13px;">The architecture is deliberately small. Four agents, a file system, and a voice profile. The complexity that matters is in the quality of VOICE.md and the precision of the citation discipline — both of which are the Senior Expert's domain, not the system's. BlackBar's job is to do the mechanical work reliably and traceably so that the Senior Expert's judgment is applied where it is irreplaceable.</p>
+  </div>
+
+</div>
+
+</div><!-- /container -->
+</body>
+</html>
