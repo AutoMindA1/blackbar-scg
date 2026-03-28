@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlackBar — GTM Sprint Strategy</title>
+  <style>
+    :root {
+      --black: #0a0a0a;
+      --brass: #c9a84c;
+      --brass-dim: rgba(201,168,76,0.15);
+      --brass-glow: rgba(201,168,76,0.06);
+      --steel: #6b7280;
+      --parchment: #f0ece4;
+      --crimson: #8b1a1a;
+      --green: #2d6a4f;
+      --green-light: rgba(45,106,79,0.12);
+      --amber: #b45309;
+      --amber-bg: rgba(180,83,9,0.08);
+      --white: #ffffff;
+      --card-bg: #111111;
+      --card-border: rgba(201,168,76,0.2);
+      --surface: #161616;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: var(--black);
+      color: var(--parchment);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── NAV ──────────────────────────────────────────── */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,10,10,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 0 48px;
+    }
+    .topnav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .topnav-inner::-webkit-scrollbar { display: none; }
+    .topnav a {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--steel);
+      text-decoration: none;
+      padding: 14px 12px;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .topnav a:hover, .topnav a.active {
+      color: var(--brass);
+      border-bottom-color: var(--brass);
+    }
+    .topnav-logo {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--white) !important;
+      letter-spacing: 2px;
+      padding-right: 16px;
+      border-right: 1px solid var(--card-border);
+      margin-right: 8px;
+    }
+
+    /* ─── HERO ─────────────────────────────────────────── */
+    .hero {
+      background: var(--black);
+      border-bottom: 3px solid var(--brass);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 20% 50%, var(--brass-glow) 0%, transparent 60%),
+                  radial-gradient(circle at 80% 20%, rgba(201,168,76,0.03) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 56px 48px 48px;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-label {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--brass);
+      margin-bottom: 12px;
+      opacity: 0.8;
+    }
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+    .hero h1 span { color: var(--brass); }
+    .hero-sub {
+      font-size: 18px;
+      color: rgba(240,236,228,0.6);
+      max-width: 680px;
+      margin-bottom: 28px;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .hero-meta-item {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .hero-meta-item strong {
+      color: var(--brass);
+      display: block;
+      font-size: 10px;
+      margin-bottom: 2px;
+      letter-spacing: 2px;
+    }
+
+    /* ─── LAYOUT ───────────────────────────────────────── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 48px; }
+    section { padding: 56px 0; }
+    section + section { border-top: 1px solid var(--card-border); }
+
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+    h2 span { color: var(--brass); }
+    .section-sub {
+      font-size: 15px;
+      color: rgba(240,236,228,0.5);
+      margin-bottom: 32px;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.5px;
+    }
+    p { margin-bottom: 16px; color: rgba(240,236,228,0.85); }
+
+    /* ─── LANE ACTION BANNER ───────────────────────────── */
+    .lane-banner {
+      background: linear-gradient(135deg, rgba(201,168,76,0.1) 0%, rgba(201,168,76,0.04) 100%);
+      border: 2px solid var(--brass);
+      border-radius: 8px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+    .lane-banner-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .lane-banner-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--brass);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .lane-banner-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--brass);
+    }
+    .lane-banner-sub {
+      font-size: 13px;
+      color: rgba(240,236,228,0.5);
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ─── DECISION CARD ────────────────────────────────── */
+    .decision-list { list-style: none; padding: 0; }
+    .decision-item {
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(201,168,76,0.08);
+    }
+    .decision-item:last-child { border-bottom: none; }
+    .decision-item-header {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .decision-number {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--brass);
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--brass);
+    }
+    .decision-text { flex: 1; }
+    .decision-text strong { color: var(--white); display: block; font-size: 15px; margin-bottom: 2px; }
+    .decision-text small { color: var(--steel); font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 0.5px; }
+    .decision-tag {
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 3px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .tag-decide { background: rgba(201,168,76,0.12); color: var(--brass); border: 1px solid rgba(201,168,76,0.3); }
+    .tag-validate { background: rgba(59,130,246,0.1); color: #93bbfc; border: 1px solid rgba(59,130,246,0.25); }
+    .tag-provide { background: rgba(168,85,247,0.1); color: #c4b5fd; border: 1px solid rgba(168,85,247,0.25); }
+    .tag-review { background: var(--green-light); color: #86efac; border: 1px solid rgba(45,106,79,0.3); }
+
+    /* ─── RESPONSE TEXTAREA ───────────────────────────── */
+    .response-field {
+      margin-left: 44px;
+    }
+    .response-label {
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--brass);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .response-textarea {
+      width: 100%;
+      min-height: 100px;
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      color: var(--parchment);
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .response-textarea:focus {
+      outline: none;
+      border-color: var(--brass);
+      box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
+    }
+    .response-textarea::placeholder {
+      color: rgba(240,236,228,0.25);
+      font-style: italic;
+    }
+    .response-hint {
+      font-size: 12px;
+      color: rgba(240,236,228,0.3);
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    /* ─── SUBMIT BUTTON ───────────────────────────────── */
+    .submit-row {
+      text-align: center;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--card-border);
+    }
+    .submit-btn {
+      display: inline-block;
+      background: var(--brass);
+      color: var(--black);
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 16px 48px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .submit-btn:hover {
+      background: #d4b45a;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(201,168,76,0.3);
+    }
+    .submit-btn:active {
+      transform: translateY(0);
+    }
+    .submit-note {
+      font-size: 12px;
+      color: rgba(240,236,228,0.35);
+      margin-top: 12px;
+      font-family: 'Courier New', monospace;
+    }
+    .submit-note a { color: var(--brass); }
+
+    /* ─── THANK YOU BANNER ────────────────────────────── */
+    .thank-you {
+      display: none;
+      background: linear-gradient(135deg, rgba(45,106,79,0.15) 0%, rgba(45,106,79,0.05) 100%);
+      border: 2px solid var(--green);
+      border-radius: 8px;
+      padding: 32px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .thank-you.visible { display: block; }
+    .thank-you h3 {
+      color: var(--green);
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+    .thank-you p { color: rgba(240,236,228,0.7); }
+
+    /* ─── PROGRESS BAR ────────────────────────────────── */
+    .progress-bar-container {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 4px;
+      overflow: hidden;
+      height: 8px;
+      margin: 16px 0 8px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--brass), #d4b45a);
+      width: 0%;
+      transition: width 0.4s ease;
+      border-radius: 4px;
+    }
+
+    /* ─── STATUS BAR ───────────────────────────────────── */
+    .status-bar {
+      display: flex;
+      gap: 0;
+      margin-bottom: 40px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+    }
+    .status-segment {
+      flex: 1;
+      padding: 16px 16px;
+      text-align: center;
+      background: var(--card-bg);
+      border-right: 1px solid var(--card-border);
+      transition: all 0.2s;
+      position: relative;
+    }
+    .status-segment:last-child { border-right: none; }
+    .status-segment.done { background: rgba(45,106,79,0.06); }
+    .status-segment.done::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--green); }
+    .status-segment.blocked { background: rgba(139,26,26,0.06); }
+    .status-segment.blocked::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--crimson); }
+    .status-segment.upcoming { opacity: 0.5; }
+    .status-label {
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--steel);
+      margin-bottom: 4px;
+    }
+    .status-name { font-size: 13px; font-weight: 700; color: var(--parchment); }
+    .status-segment.done .status-name { color: var(--green); }
+    .status-segment.blocked .status-name { color: var(--crimson); }
+
+    /* ─── SPRINT ACCORDION ─────────────────────────────── */
+    .sprint-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .sprint-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 28px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .sprint-header:hover { background: rgba(201,168,76,0.03); }
+    .sprint-header h3 { font-size: 18px; font-weight: 700; color: var(--brass); margin: 0; }
+    .sprint-header-right { display: flex; align-items: center; gap: 12px; }
+    .sprint-tag {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 3px;
+      border: 1px solid;
+    }
+    .tag-current { color: var(--brass); border-color: var(--brass); background: rgba(201,168,76,0.08); }
+    .tag-next { color: var(--steel); border-color: var(--steel); background: rgba(107,114,128,0.08); }
+    .tag-future { color: rgba(240,236,228,0.3); border-color: rgba(240,236,228,0.15); }
+    .sprint-chevron {
+      color: var(--steel);
+      font-size: 18px;
+      transition: transform 0.3s;
+    }
+    .sprint-card.open .sprint-chevron { transform: rotate(180deg); }
+    .sprint-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+    .sprint-card.open .sprint-body { max-height: 5000px; }
+    .sprint-body-inner {
+      padding: 0 28px 28px;
+      border-top: 1px solid var(--card-border);
+    }
+    .sprint-body-inner > p:first-child { margin-top: 20px; }
+
+    /* ─── LANE ACTION INLINE ───────────────────────────── */
+    .lane-action {
+      background: rgba(201,168,76,0.06);
+      border-left: 3px solid var(--brass);
+      padding: 16px 20px;
+      margin: 20px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .lane-action-label {
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--brass);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lane-action p { margin-bottom: 8px; }
+    .lane-action p:last-child { margin-bottom: 0; }
+
+    /* ─── GATE ─────────────────────────────────────────── */
+    .gate {
+      border-left: 3px solid var(--steel);
+      background: rgba(107,114,128,0.06);
+      padding: 16px 20px;
+      margin: 20px 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .gate-label {
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--steel);
+      margin-bottom: 6px;
+    }
+    .gate-green { border-left-color: var(--green); background: rgba(45,106,79,0.06); }
+    .gate-green .gate-label { color: var(--green); }
+
+    /* ─── TASK TABLE ────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 14px;
+    }
+    thead th {
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--brass);
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--brass);
+      background: rgba(201,168,76,0.03);
+    }
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(201,168,76,0.08);
+      vertical-align: top;
+      color: rgba(240,236,228,0.8);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(201,168,76,0.03); }
+
+    .agent-tag {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 2px;
+      white-space: nowrap;
+    }
+    .agent-intake { background: rgba(59,130,246,0.12); color: #93bbfc; }
+    .agent-research { background: rgba(168,85,247,0.12); color: #c4b5fd; }
+    .agent-drafting { background: rgba(245,158,11,0.12); color: #fbbf24; }
+    .agent-qa { background: rgba(239,68,68,0.12); color: #fca5a5; }
+    .agent-system { background: rgba(201,168,76,0.12); color: var(--brass); }
+
+    /* ─── KPI ROW ──────────────────────────────────────── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 20px;
+      text-align: center;
+    }
+    .kpi-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--brass);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .kpi-label {
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--steel);
+    }
+    .kpi-sublabel {
+      font-size: 12px;
+      color: rgba(240,236,228,0.4);
+      margin-top: 4px;
+    }
+
+    /* ─── TIMELINE ─────────────────────────────────────── */
+    .timeline { position: relative; padding-left: 32px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--card-border);
+    }
+    .timeline-item { position: relative; margin-bottom: 28px; }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -28px;
+      top: 6px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--steel);
+      background: var(--black);
+    }
+    .timeline-item.done::before { background: var(--green); border-color: var(--green); }
+    .timeline-item.active::before { background: var(--brass); border-color: var(--brass); box-shadow: 0 0 8px rgba(201,168,76,0.4); }
+    .timeline-date {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--steel);
+      margin-bottom: 4px;
+    }
+    .timeline-title { font-size: 16px; font-weight: 700; color: var(--parchment); margin-bottom: 4px; }
+    .timeline-desc { font-size: 13px; color: rgba(240,236,228,0.6); }
+
+    /* ─── FOOTER ───────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 32px 0;
+      text-align: center;
+    }
+    footer p {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: rgba(240,236,228,0.3);
+    }
+
+    /* ─── RESPONSIVE ───────────────────────────────────── */
+    @media (max-width: 768px) {
+      .hero-inner, .container, .topnav { padding-left: 20px; padding-right: 20px; }
+      .hero h1 { font-size: 28px; }
+      .status-bar { flex-direction: column; }
+      .sprint-header { flex-direction: column; gap: 8px; align-items: flex-start; }
+      .hero-meta { flex-direction: column; gap: 12px; }
+      .lane-banner { padding: 20px; }
+      .decision-item-header { flex-direction: column; gap: 8px; }
+      .response-field { margin-left: 0; }
+      table { font-size: 12px; }
+      thead th, tbody td { padding: 8px 6px; }
+      .topnav-inner { gap: 0; }
+      .topnav a { padding: 12px 8px; font-size: 10px; }
+    }
+
+    @media print {
+      .topnav { display: none; }
+      body { background: #fff; color: #111; }
+      .hero { background: #fff; border-bottom-color: #999; }
+      .hero h1, .hero h1 span, h2, h2 span, h3, .sprint-header h3 { color: #111; }
+      .sprint-card, .kpi-card { border-color: #ccc; background: #fafafa; }
+      .sprint-body { max-height: none !important; }
+      .sprint-chevron { display: none; }
+      .lane-banner { border-color: #999; background: #f5f5f0; }
+      .lane-action { background: #f5f5f0; border-left-color: #999; }
+      .gate { background: #f5f5f5; border-left-color: #999; }
+      .response-textarea { border-color: #999; background: #fafafa; color: #111; }
+    }
+
+    /* smooth scroll */
+    html { scroll-behavior: smooth; scroll-padding-top: 60px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     STICKY NAV
+     ═══════════════════════════════════════════════════════ -->
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a href="#" class="topnav-logo">BlackBar</a>
+    <a href="#lane-decisions">Lane's Queue</a>
+    <a href="#status">Status</a>
+    <a href="#sprints">Sprints</a>
+    <a href="#timeline">Timeline</a>
+    <a href="#kpis">Metrics</a>
+    <a href="#risks">Risks</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════════════════ -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-label">Swainston Consulting Group — Sprint Playbook</div>
+    <h1><span>BlackBar</span> Go-To-Market</h1>
+    <p class="hero-sub">From pressure-tested prototype to Lane and Mariz running cases independently. Five sprints, seven weeks.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item"><strong>System Owner</strong>Caleb Swainston</div>
+      <div class="hero-meta-item"><strong>Current Phase</strong>Phase 3 — Blocked</div>
+      <div class="hero-meta-item"><strong>Created</strong>28 March 2026</div>
+      <div class="hero-meta-item"><strong>Target Go-Live</strong>May 2026</div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════
+     LANE'S DECISION QUEUE — FORM
+     ═══════════════════════════════════════════════════════ -->
+<section id="lane-decisions">
+  <div class="container">
+
+    <!-- Thank you banner (shown after submission) -->
+    <div class="thank-you" id="thank-you">
+      <h3>Responses Received</h3>
+      <p>Your answers have been sent to Caleb. He'll implement fixes as they come in and follow up if anything needs clarification.</p>
+    </div>
+
+    <div class="lane-banner">
+      <div class="lane-banner-header">
+        <div class="lane-banner-icon">L</div>
+        <div>
+          <div class="lane-banner-title">Lane — What I Need From You</div>
+          <div class="lane-banner-sub">8 items before Sprint 1 can close. Type your answers below and hit Submit.</div>
+        </div>
+      </div>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <p style="text-align:center;color:var(--steel);font-family:'Courier New',monospace;font-size:12px;margin:0;">
+        <span id="lane-progress">0</span> of 8 answered
+      </p>
+    </div>
+
+    <form id="lane-form" action="https://formsubmit.co/cswainston@gmail.com" method="POST">
+      <!-- FormSubmit config -->
+      <input type="hidden" name="_subject" value="BlackBar GTM — Lane's Decision Queue Responses">
+      <input type="hidden" name="_captcha" value="false">
+      <input type="hidden" name="_template" value="table">
+      <input type="hidden" name="_next" value="https://autominda1.github.io/blackbar-scg/blackbar-gtm-sprint-strategy.html?submitted=true">
+      <input type="hidden" name="_autoresponse" value="Thanks Lane — your BlackBar GTM responses have been sent to Caleb. He'll follow up as he implements each fix.">
+
+      <ul class="decision-list">
+
+        <!-- ─── ITEM 1 ─── -->
+        <li class="decision-item">
+          <div class="decision-item-header">
+            <div class="decision-number">1</div>
+            <div class="decision-text">
+              <strong>Confirm the mandatory intake fields</strong>
+              Before any case enters the pipeline, what MUST be present? My proposal: incident date, defendant legal name (not DBA), specific location, alleged mechanism, report type, and at least one document. Anything missing from this list?
+              <br><small>Blocks: T1-01 · Intake Agent</small>
+            </div>
+            <span class="decision-tag tag-validate">Validate</span>
+          </div>
+          <div class="response-field">
+            <label class="response-label" for="q1">Your Answer</label>
+            <textarea class="response-textarea" id="q1" name="1 — Mandatory Intake Fields" placeholder="e.g., 'Add property management company name' or 'Confirmed — that list is complete'" oninput="trackProgress()"></textarea>
+          </div>
+        </li>
+
+        <!-- ─── ITEM 2 ─── -->
+        <li class="decision-item">
+          <div class="decision-item-header">
+            <div class="decision-number">2</div>
+            <div class="decision-text">
+              <strong>Where do litigation deadlines come from?</strong>
+              The pressure test says we need complaint date, expert disclosure deadlines, trial date, and court designation (USDC vs. 8th JDC). Your workflow doc says Clio tracks these. Should the Intake Agent pull from Clio, or will you/Mariz paste them into the raw input?
+              <br><small>Blocks: T1-02 · Intake Agent</small>
+            </div>
+            <span class="decision-tag tag-decide">Decide</span>
+          </div>
+          <div class="response-field">
+            <label class="response-label" for="q2">Your Answer</label>
+            <textarea class="response-textarea" id="q2" name="2 — Litigation Deadline Source" placeholder="e.g., 'Mariz will paste from Clio' or 'Pull directly from Clio API'" oninput="trackProgress()"></textarea>
+          </div>
+        </li>
+
+        <!-- ─── ITEM 3 ─── -->
+        <li class="decision-item">
+          <div class="decision-item-header">
+            <div class="decision-number">3</div>
+            <div class="decision-text">
+              <strong>Verify the Nevada jurisdiction code table</strong>
+              I need to hard-code the building code editions by jurisdiction (Clark County, City of Las Vegas, Henderson, NLV, unincorporated Clark County) with actual ordinance effective dates — UBC 1982 through 1997, then IBC cycles. The pressure test says this must be verified against Clark County Development Services records by a licensed CBO. That's you.
+              <br><small>Blocks: T1-06 · Research Agent</small>
+            </div>
+            <span class="decision-tag tag-provide">Provide</span>
+          </div>
+          <div class="response-field">
+            <label class="response-label" for="q3">Your Answer</label>
+            <textarea class="response-textarea" id="q3" name="3 — NV Jurisdiction Code Table" placeholder="List each jurisdiction with code edition and effective dates, or tell me you'll send a separate document" style="min-height:140px;" oninput="trackProgress()"></textarea>
+            <div class="response-hint">This can be detailed — feel free to type as much as needed or note that you'll send a file separately.</div>
+          </div>
+        </li>
+
+        <!-- ─── ITEM 4 ─── -->
+        <li class="decision-item">
+          <div class="decision-item-header">
+            <div class="decision-number">4</div>
+            <div class="decision-text">
+              <strong>Confirm the "never use" word list for reports</strong>
+              Proposed additions: "unreasonably dangerous," "reasonable care," "reasonable person," "fault," "victim," "safe/unsafe" as standalone adjectives, "causation" without a physical modifier, "clearly/obviously" standalone, "slip and fall" unhyphenated, "accident" unqualified. Anything to add or remove?
+              <br><small>Blocks: T1-09 · Drafting Agent</small>
+            </div>
+            <span class="decision-tag tag-validate">Validate</span>
+          </div>
+          <div class="response-field">
+            <label class="response-label" for="q4">Your Answer</label>
+            <textarea class="response-textarea" id="q4" name="4 — Never Use Word List" placeholder="e.g., 'Add: negligent, defective. Remove: nothing — list is good'" oninput="trackProgress()"></textarea>
+          </div>
+        </li>
+
+        <!-- ─── ITEM 5 ─── -->
+        <li class="decision-item">
+          <div class="decision-item-header">
+            <div class="decision-number">5</div>
+            <div class="decision-text">
+              <strong>Approve the contributory negligence gate</strong>
+              Block 7 (NSC Distracted Walking / contributory negligence framing) currently inserts automatically. The pressure test says it should only appear when defense counsel has explicitly authorized it. Agreed?
+              <br><small>Blocks: T1-10 · Drafting Agent</small>
+            </div>
+            <span class="decision-tag tag-decide">Decide</span>
+          </div>
+          <div class="response-field">
+            <label class="response-label" for="q5">Your Answer</label>
+            <textarea class="response-textarea" id="q5" name="5 — Contributory Negligence Gate" placeholder="e.g., 'Agreed — counsel must authorize' or 'No, always include but flag for review'" oninput="trackProgress()"></textarea>
+          </div>
+        </li>
+
+        <!-- ─── ITEM 6 ─── -->
+        <li class="decision-item">
+          <div class="decision-item-header">
+            <div class="decision-number">6</div>
+            <div class="decision-text">
+              <strong>Review the limitation disclosure language</strong>
+              When a surface was remediated before your inspection, the draft needs verbatim disclosure language. I have proposed wording — need your sign-off before encoding it. <em>(This is borrower-facing-equivalent: filed report language.)</em>
+              <br><small>Blocks: T1-11 · Drafting Agent</small>
+            </div>
+            <span class="decision-tag tag-review">Review</span>
+          </div>
+          <div class="response-field">
+            <label class="response-label" for="q6">Your Answer</label>
+            <textarea class="response-textarea" id="q6" name="6 — Limitation Disclosure Language" placeholder="e.g., 'Send me the proposed wording and I'll redline it' or provide your preferred language here" style="min-height:140px;" oninput="trackProgress()"></textarea>
+            <div class="response-hint">If you need to see the proposed wording first, just say so — Caleb will send it.</div>
+          </div>
+        </li>
+
+        <!-- ─── ITEM 7 ─── -->
+        <li class="decision-item">
+          <div class="decision-item-header">
+            <div class="decision-number">7</div>
+            <div class="decision-text">
+              <strong>Confirm the ADA/A117.1 protocol</strong>
+              When does ADA analysis apply? Need: jurisdiction triggers (effective dates), A117.1 edition mapping, surface provisions (Sections 302/303), IBC interaction rules, and alteration triggers. You're the CBO — I need your determination framework, not the agent's guess.
+              <br><small>Blocks: T1-07 · Research Agent</small>
+            </div>
+            <span class="decision-tag tag-provide">Provide</span>
+          </div>
+          <div class="response-field">
+            <label class="response-label" for="q7">Your Answer</label>
+            <textarea class="response-textarea" id="q7" name="7 — ADA/A117.1 Protocol" placeholder="Provide your determination framework, or note that you'll send a separate document with the full protocol" style="min-height:140px;" oninput="trackProgress()"></textarea>
+            <div class="response-hint">This is technical — as much detail as you can give here, or flag for a follow-up call.</div>
+          </div>
+        </li>
+
+        <!-- ─── ITEM 8 ─── -->
+        <li class="decision-item">
+          <div class="decision-item-header">
+            <div class="decision-number">8</div>
+            <div class="decision-text">
+              <strong>Pick the first live case for Sprint 2</strong>
+              Ideal: a Gleason-type initial report. Standard slip-and-fall, single defendant, no stair/ADA complexity, no urgency on filing deadline. Do you have one incoming or recently assigned that fits?
+              <br><small>Blocks: Sprint 2 start</small>
+            </div>
+            <span class="decision-tag tag-decide">Decide</span>
+          </div>
+          <div class="response-field">
+            <label class="response-label" for="q8">Your Answer</label>
+            <textarea class="response-textarea" id="q8" name="8 — First Live Case Selection" placeholder="e.g., 'The [case name] matter just came in — standard slip-and-fall, single defendant'" oninput="trackProgress()"></textarea>
+          </div>
+        </li>
+      </ul>
+
+      <div class="submit-row">
+        <button type="submit" class="submit-btn">Submit Answers to Caleb</button>
+        <div class="submit-note">Responses go directly to Caleb's email. You'll get a confirmation copy too.</div>
+      </div>
+    </form>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     STATUS
+     ═══════════════════════════════════════════════════════ -->
+<section id="status">
+  <div class="container">
+    <h2><span>01</span> — Where We Are</h2>
+    <p class="section-sub">After the 26 March pressure test</p>
+
+    <div class="status-bar">
+      <div class="status-segment done"><div class="status-label">Phase 1</div><div class="status-name">Voice Analysis</div></div>
+      <div class="status-segment done"><div class="status-label">Phase 2</div><div class="status-name">Agent System</div></div>
+      <div class="status-segment blocked"><div class="status-label">Phase 3</div><div class="status-name">Live Test Blocked</div></div>
+      <div class="status-segment upcoming"><div class="status-label">Phase 4</div><div class="status-name">DOCX Layer</div></div>
+      <div class="status-segment upcoming"><div class="status-label">Phase 5</div><div class="status-name">Production</div></div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-value">15</div>
+        <div class="kpi-label">Blockers Found</div>
+        <div class="kpi-sublabel">All 4 agents affected</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">8</div>
+        <div class="kpi-label">Need Lane's Input</div>
+        <div class="kpi-sublabel">See decision queue above</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">7</div>
+        <div class="kpi-label">Caleb Can Fix Solo</div>
+        <div class="kpi-sublabel">Prompt engineering only</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">0</div>
+        <div class="kpi-label">Cases Through Pipeline</div>
+        <div class="kpi-sublabel">Target: 5+ before go-live</div>
+      </div>
+    </div>
+
+    <p style="color:rgba(240,236,228,0.6);font-size:14px;text-align:center;">The 26 March pressure test used 5 expert personas to adversarial-test every agent. Verdict: <strong style="color:var(--crimson)">NO-GO for live production.</strong> 15 blocking issues — any one is sufficient to produce a report you can't sign. The fixes are specific and enumerated below.</p>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     SPRINTS
+     ═══════════════════════════════════════════════════════ -->
+<section id="sprints">
+  <div class="container">
+    <h2><span>02</span> — Sprint Plan</h2>
+    <p class="section-sub">Click any sprint to expand</p>
+
+    <!-- ═══ SPRINT 1 ═══ -->
+    <div class="sprint-card open">
+      <div class="sprint-header" onclick="toggleSprint(this)">
+        <h3>Sprint 1 — Kill the Blockers</h3>
+        <div class="sprint-header-right">
+          <span class="sprint-tag tag-current">Week 1–2 · Now</span>
+          <span class="sprint-chevron">&#9662;</span>
+        </div>
+      </div>
+      <div class="sprint-body">
+        <div class="sprint-body-inner">
+          <p>Resolve all 15 Tier 1 items. 8 require Lane's input (see queue above). 7 are prompt-engineering fixes Caleb handles solo. No live case until this sprint closes clean.</p>
+
+          <div class="lane-action">
+            <div class="lane-action-label">Lane's Role This Sprint</div>
+            <p>Respond to the 8 decision items above. Caleb implements each fix as answers come in. Once all 15 are resolved, Caleb runs a synthetic case (Gleason-type) end-to-end and sends you the output for review.</p>
+          </div>
+
+          <table>
+            <thead><tr><th>ID</th><th>Agent</th><th>What Needs to Happen</th><th>Who</th></tr></thead>
+            <tbody>
+              <tr><td>T1-01</td><td><span class="agent-tag agent-intake">Intake</span></td><td>Lock down mandatory fields for INTAKE COMPLETE</td><td style="color:var(--brass)">Lane</td></tr>
+              <tr><td>T1-02</td><td><span class="agent-tag agent-intake">Intake</span></td><td>Add Litigation Timeline block (Clio fields)</td><td style="color:var(--brass)">Lane</td></tr>
+              <tr><td>T1-03</td><td><span class="agent-tag agent-intake">Intake</span></td><td>Add SPOLIATION flag — evidence destroyed = BLOCKING</td><td>Caleb</td></tr>
+              <tr><td>T1-04</td><td><span class="agent-tag agent-intake">Intake</span></td><td>Add STAIR/RISER/HANDRAIL research flag</td><td>Caleb</td></tr>
+              <tr><td>T1-05</td><td><span class="agent-tag agent-intake">Intake</span></td><td>Structured defendant: entity type, DBA, property owner, retention scope</td><td>Caleb</td></tr>
+              <tr><td>T1-06</td><td><span class="agent-tag agent-research">Research</span></td><td>Hard-coded NV jurisdiction code table — CBO-verified</td><td style="color:var(--brass)">Lane</td></tr>
+              <tr><td>T1-07</td><td><span class="agent-tag agent-research">Research</span></td><td>ADA/A117.1 determination framework</td><td style="color:var(--brass)">Lane</td></tr>
+              <tr><td>T1-08</td><td><span class="agent-tag agent-research">Research</span></td><td>Handoff gate: 6 required fields before Research→Drafting</td><td>Caleb</td></tr>
+              <tr><td>T1-09</td><td><span class="agent-tag agent-drafting">Drafting</span></td><td>Expand NEVER USE word list</td><td style="color:var(--brass)">Lane</td></tr>
+              <tr><td>T1-10</td><td><span class="agent-tag agent-drafting">Drafting</span></td><td>Block 7 → conditional on counsel authorization</td><td style="color:var(--brass)">Lane</td></tr>
+              <tr><td>T1-11</td><td><span class="agent-tag agent-drafting">Drafting</span></td><td>Limitation disclosure language — verbatim sign-off needed</td><td style="color:var(--brass)">Lane</td></tr>
+              <tr><td>T1-12</td><td><span class="agent-tag agent-qa">QA</span></td><td>Lower escalation threshold (>3 blocking, not >5)</td><td>Caleb</td></tr>
+              <tr><td>T1-13</td><td><span class="agent-tag agent-qa">QA</span></td><td>Add benchmark load verification before scoring</td><td>Caleb</td></tr>
+              <tr><td>T1-14</td><td><span class="agent-tag agent-qa">QA</span></td><td>Add opinion sufficiency check (Check 11)</td><td>Caleb</td></tr>
+              <tr><td>T1-15</td><td><span class="agent-tag agent-qa">QA</span></td><td>Add internal consistency check (Check 12)</td><td>Caleb</td></tr>
+            </tbody>
+          </table>
+
+          <div class="gate">
+            <div class="gate-label">Sprint 1 Exit Criteria</div>
+            All 15 items resolved. Synthetic case runs end-to-end. Lane reviews the output and confirms: "I could sign a report that looks like this."
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SPRINT 2 ═══ -->
+    <div class="sprint-card">
+      <div class="sprint-header" onclick="toggleSprint(this)">
+        <h3>Sprint 2 — First Real Case</h3>
+        <div class="sprint-header-right">
+          <span class="sprint-tag tag-next">Week 3</span>
+          <span class="sprint-chevron">&#9662;</span>
+        </div>
+      </div>
+      <div class="sprint-body">
+        <div class="sprint-body-inner">
+          <p>One real incoming matter runs through the entire pipeline. Lane reviews output at every stage — intake, research, draft, QA — before the next agent proceeds. Goal: one filed initial report produced with BlackBar assistance.</p>
+
+          <div class="lane-action">
+            <div class="lane-action-label">Lane's Role This Sprint</div>
+            <p>You review every stage output. This is not extra work — it's your normal review, just applied to the agent's output instead of Mariz's first draft. After filing, we measure how much you changed from what the system produced.</p>
+          </div>
+
+          <table>
+            <thead><tr><th>Step</th><th>What Happens</th><th>Lane's Review Point</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>Caleb feeds raw case input to the Intake Agent</td><td>Review intake.md — are the right fields captured?</td></tr>
+              <tr><td>2</td><td>Research Agent resolves flags, builds section plan</td><td>Confirm code determination + boilerplate selection</td></tr>
+              <tr><td>3</td><td>Drafting Agent produces full report draft against Gleason benchmark</td><td>Line-by-line review — redline as you normally would</td></tr>
+              <tr><td>4</td><td>QA Agent audits the draft (12-point check)</td><td>Compare QA findings against your actual edits</td></tr>
+              <tr><td>5</td><td>Caleb captures all VOICE.md updates from your edits</td><td>Flag any new language worth adding to the system</td></tr>
+            </tbody>
+          </table>
+
+          <div class="gate">
+            <div class="gate-label">Sprint 2 Exit Criteria</div>
+            One report filed. Edit distance measured. QA prediction accuracy scored. VOICE.md updated to v2.1 with Lane's corrections. Cycle time recorded.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SPRINT 3 ═══ -->
+    <div class="sprint-card">
+      <div class="sprint-header" onclick="toggleSprint(this)">
+        <h3>Sprint 3 — Rebuttal + Supplemental + DOCX</h3>
+        <div class="sprint-header-right">
+          <span class="sprint-tag tag-next">Week 4–5</span>
+          <span class="sprint-chevron">&#9662;</span>
+        </div>
+      </div>
+      <div class="sprint-body">
+        <div class="sprint-body-inner">
+          <p>Run a rebuttal (Heagy-type) and supplemental (Anderson-type) through the pipeline. Implement highest-impact Tier 2 fixes. Build the DOCX formatting layer — the system outputs a signable Word document, not just markdown.</p>
+
+          <div class="lane-action">
+            <div class="lane-action-label">Lane's Role This Sprint</div>
+            <p>Same review process as Sprint 2 for two new case types. After this sprint, you'll have seen all three report pathways. Also: confirm the DOCX template matches your filing format (letterhead, figure layout, signature block).</p>
+          </div>
+
+          <div class="gate">
+            <div class="gate-label">Sprint 3 Exit Criteria</div>
+            Three report types produced: Initial, Rebuttal, Supplemental. DOCX output matches SCG filing format. Lane confirms template is signable.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SPRINT 4 ═══ -->
+    <div class="sprint-card">
+      <div class="sprint-header" onclick="toggleSprint(this)">
+        <h3>Sprint 4 — Mariz Onboarding + Volume</h3>
+        <div class="sprint-header-right">
+          <span class="sprint-tag tag-next">Week 5–6</span>
+          <span class="sprint-chevron">&#9662;</span>
+        </div>
+      </div>
+      <div class="sprint-body">
+        <div class="sprint-body-inner">
+          <p>Mariz runs her first case through the pipeline (you review only at QA stage, not every step). Three concurrent cases test throughput. You define which case types are "standard" (post-QA review only) vs. "complex" (every-stage review).</p>
+
+          <div class="lane-action">
+            <div class="lane-action-label">Lane's Role This Sprint</div>
+            <p>Define the complexity tiers: which case characteristics require you to review every stage vs. trusting the system to QA-only review? Proposal: stair/ADA/multi-defendant/wrongful death = Complex. Standard slip-and-fall, single defendant = Standard.</p>
+          </div>
+
+          <div class="gate">
+            <div class="gate-label">Sprint 4 Exit Criteria</div>
+            Mariz files a report using BlackBar. Standard cases run with post-QA review only. Average cycle time under 4 hours for standard matters.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SPRINT 5 ═══ -->
+    <div class="sprint-card">
+      <div class="sprint-header" onclick="toggleSprint(this)">
+        <h3>Sprint 5 — Production Go-Live</h3>
+        <div class="sprint-header-right">
+          <span class="sprint-tag tag-future">Week 7</span>
+          <span class="sprint-chevron">&#9662;</span>
+        </div>
+      </div>
+      <div class="sprint-body">
+        <div class="sprint-body-inner">
+          <p>You and Mariz operate independently. Caleb shifts to maintenance. BlackBar becomes the default workflow for all new SCG matters.</p>
+
+          <div class="lane-action">
+            <div class="lane-action-label">Lane's Role This Sprint</div>
+            <p>Confirm you're comfortable operating without Caleb in the loop. Announce turnaround improvement to attorney contacts when ready.</p>
+          </div>
+
+          <div class="gate gate-green">
+            <div class="gate-label">Production Go-Live Criteria</div>
+            5+ reports filed with BlackBar. Both operators independent. Average edit distance &lt;15% from draft to final. No Tier 1 regressions in last 2 sprints. Lane says: "Ship it."
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     TIMELINE
+     ═══════════════════════════════════════════════════════ -->
+<section id="timeline">
+  <div class="container">
+    <h2><span>03</span> — Timeline</h2>
+    <p class="section-sub">Critical path to production</p>
+
+    <div class="timeline">
+      <div class="timeline-item done">
+        <div class="timeline-date">19 March 2026</div>
+        <div class="timeline-title">VOICE.md v2.0 Complete</div>
+        <div class="timeline-desc">Voice analysis from 9+ filed reports and 3 benchmarks. 20-section behavioral profile.</div>
+      </div>
+      <div class="timeline-item done">
+        <div class="timeline-date">21 March 2026</div>
+        <div class="timeline-title">Agent System Built</div>
+        <div class="timeline-desc">4 agent prompts + pipeline architecture. Handoff contracts defined.</div>
+      </div>
+      <div class="timeline-item done">
+        <div class="timeline-date">26 March 2026</div>
+        <div class="timeline-title">Pressure Test — NO-GO</div>
+        <div class="timeline-desc">15 Tier 1 + 30 Tier 2 findings across all 4 agents.</div>
+      </div>
+      <div class="timeline-item active">
+        <div class="timeline-date">28 Mar — 11 Apr</div>
+        <div class="timeline-title">Sprint 1 — Kill the Blockers</div>
+        <div class="timeline-desc">Resolve all Tier 1 items. Lane provides 8 inputs. Synthetic case validation.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-date">14 — 18 Apr</div>
+        <div class="timeline-title">Sprint 2 — First Real Case</div>
+        <div class="timeline-desc">Lane reviews every stage. One filed report. Metrics captured.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-date">21 Apr — 2 May</div>
+        <div class="timeline-title">Sprint 3 — Case Type Expansion</div>
+        <div class="timeline-desc">Rebuttal + supplemental validated. DOCX formatting layer built.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-date">5 — 16 May</div>
+        <div class="timeline-title">Sprint 4 — Mariz + Volume</div>
+        <div class="timeline-desc">Second operator. 3+ concurrent cases. Review tiers defined.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-date">19 — 23 May</div>
+        <div class="timeline-title">Sprint 5 — Go-Live</div>
+        <div class="timeline-desc">Independent operation. SOPs documented. BlackBar is default.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     KPIs
+     ═══════════════════════════════════════════════════════ -->
+<section id="kpis">
+  <div class="container">
+    <h2><span>04</span> — How We'll Know It's Working</h2>
+    <p class="section-sub">Measured every sprint</p>
+
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-value">&lt;4h</div>
+        <div class="kpi-label">Draft Turnaround</div>
+        <div class="kpi-sublabel">Raw input to signable draft</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">&lt;15%</div>
+        <div class="kpi-label">Lane's Edit Rate</div>
+        <div class="kpi-sublabel">% of draft changed before filing</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">&gt;85%</div>
+        <div class="kpi-label">QA Catch Rate</div>
+        <div class="kpi-sublabel">% of Lane's edits the QA agent predicted</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value">&lt;5</div>
+        <div class="kpi-label">Placeholders</div>
+        <div class="kpi-sublabel">[MISSING] markers in standard reports</div>
+      </div>
+    </div>
+
+    <p style="color:rgba(240,236,228,0.6);font-size:14px;text-align:center;max-width:700px;margin:0 auto;">
+      <strong style="color:var(--parchment)">Translation for Lane:</strong> If edit rate is under 15%, that means the system is producing drafts where you're making roughly the same tweaks you'd make to Mariz's first draft. Under 4 hours means same-day turnaround on standard matters. The QA catch rate measures whether the system spots its own mistakes before you do.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     RISKS
+     ═══════════════════════════════════════════════════════ -->
+<section id="risks">
+  <div class="container">
+    <h2><span>05</span> — What Could Go Wrong</h2>
+    <p class="section-sub">Known risks and how we're handling them</p>
+
+    <table>
+      <thead><tr><th>Risk</th><th>Why It Matters</th><th>How We're Handling It</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Code table has wrong dates</strong></td>
+          <td style="color:var(--crimson)">Wrong code edition = inadmissible opinion</td>
+          <td>Lane (CBO) verifies every entry against Clark County Dev Services records. Table is never AI-generated.</td>
+        </tr>
+        <tr>
+          <td><strong>Your voice evolves but VOICE.md doesn't</strong></td>
+          <td>Draft quality degrades as language drifts</td>
+          <td>Every filed report triggers a diff check. Version bump after each update. Sprint 2 produces v2.1.</td>
+        </tr>
+        <tr>
+          <td><strong>Benchmark PDFs fail to load</strong></td>
+          <td>QA scoring runs against nothing — silent pass</td>
+          <td>Sprint 1 adds explicit load verification. FAILED = immediate halt, no fake scores.</td>
+        </tr>
+        <tr>
+          <td><strong>Complex cases produce unusable drafts</strong></td>
+          <td>Lane's review burden stays high for edge cases</td>
+          <td>Sprint 4 creates two review tiers. Complex cases get every-stage review. Don't force single-pass on stair/ADA/multi-defendant.</td>
+        </tr>
+        <tr>
+          <td><strong>Speed promise creates quality pressure</strong></td>
+          <td>Fast turnaround + bad draft = malpractice exposure</td>
+          <td>No external promises until 5+ reports filed with metrics meeting targets. Production gate is Lane's call.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <p>BlackBar GTM Sprint Strategy v3.0 — Swainston Consulting Group — 28 March 2026</p>
+    <p style="margin-top:8px">System: Caleb Swainston · Domain: Lane Swainston CBO, CXLT, TCDS</p>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════
+     INTERACTIVE JS
+     ═══════════════════════════════════════════════════════ -->
+<script>
+  // Accordion
+  function toggleSprint(header) {
+    const card = header.closest('.sprint-card');
+    card.classList.toggle('open');
+  }
+
+  // Track which textareas have content for progress bar
+  function trackProgress() {
+    const textareas = document.querySelectorAll('.response-textarea');
+    let filled = 0;
+    textareas.forEach(ta => {
+      if (ta.value.trim().length > 0) filled++;
+    });
+    document.getElementById('lane-progress').textContent = filled;
+    const pct = (filled / textareas.length) * 100;
+    document.getElementById('progress-fill').style.width = pct + '%';
+  }
+
+  // Nav active state on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.topnav a[href^="#"]');
+
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 80) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+
+  // Check for successful submission redirect
+  if (window.location.search.includes('submitted=true')) {
+    document.getElementById('thank-you').classList.add('visible');
+    // Disable form fields after submission
+    document.querySelectorAll('.response-textarea').forEach(ta => {
+      ta.disabled = true;
+      ta.style.opacity = '0.5';
+    });
+    document.querySelector('.submit-btn').disabled = true;
+    document.querySelector('.submit-btn').textContent = 'SUBMITTED';
+    document.querySelector('.submit-btn').style.opacity = '0.5';
+    document.querySelector('.submit-btn').style.cursor = 'default';
+    // Scroll to top to see thank-you banner
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Form validation — require at least one answer
+  document.getElementById('lane-form').addEventListener('submit', function(e) {
+    const textareas = document.querySelectorAll('.response-textarea');
+    let anyFilled = false;
+    textareas.forEach(ta => {
+      if (ta.value.trim().length > 0) anyFilled = true;
+    });
+    if (!anyFilled) {
+      e.preventDefault();
+      alert('Please answer at least one question before submitting.');
+    }
+  });
+</script>
+
+</body>
+</html>
