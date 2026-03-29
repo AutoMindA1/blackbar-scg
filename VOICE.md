@@ -297,6 +297,17 @@ Principal Consultant
 | "negligent" / "negligence" | That's for counsel to argue |
 | "slip-and-fall" (hyphenated) | Use "slip and fall" |
 | "in my opinion" | Use "In SCG's opinion" or restructure entirely |
+| "prior to" | Use "before" — Lane directive (28 Mar 2026) |
+| "clearly" / "obviously" | Absolute terms — avoid; let evidence speak |
+| "undoubtedly" / "certainly" / "unquestionably" | Absolute terms — avoid; use "within a reasonable degree of certainty" instead |
+| "unreasonably dangerous" | Legal conclusion — for counsel, not expert |
+| "reasonable care" / "reasonable person" | Legal standard — not expert's to assert |
+| "fault" | Legal conclusion — use "contributing factor(s)" |
+| "victim" | Use "Plaintiff" — "victim" presupposes liability |
+| "safe" / "unsafe" | Binary absolutes — describe the condition factually instead |
+| "causation" | Legal term of art — use "contributing factor(s)" |
+
+> ⚠️ **Pending expansion:** Lane + Mariz to provide fuller list (noted 28 Mar 2026). Update when received.
 
 ---
 
