@@ -5,6 +5,14 @@
 Cases/
 benchmarks/
 
+# Environment
+.env
+
+# Node
+node_modules/
+dist/
+webapp/uploads/
+
 # Editor
 *.swp
 *.swo

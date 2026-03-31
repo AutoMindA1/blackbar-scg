@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("operator")
+  cases        Case[]
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Case {
+  id             String      @id @default(uuid())
+  name           String
+  caseType       String?     @map("case_type")
+  reportType     String?     @map("report_type")
+  jurisdiction   String?
+  opposingExpert String?     @map("opposing_expert")
+  deadline       DateTime?
+  stage          String      @default("intake")
+  createdBy      String      @map("created_by")
+  creator        User        @relation(fields: [createdBy], references: [id])
+  documents      Document[]
+  agentLogs      AgentLog[]
+  report         Report?
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  @@map("cases")
+}
+
+model Document {
+  id         String   @id @default(uuid())
+  caseId     String   @map("case_id")
+  case       Case     @relation(fields: [caseId], references: [id])
+  filename   String
+  filepath   String
+  sizeBytes  Int?     @map("size_bytes")
+  pageCount  Int?     @map("page_count")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  @@map("documents")
+}
+
+model AgentLog {
+  id        Int      @id @default(autoincrement())
+  caseId    String   @map("case_id")
+  case      Case     @relation(fields: [caseId], references: [id])
+  stage     String
+  type      String
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("agent_logs")
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  caseId    String   @unique @map("case_id")
+  case      Case     @relation(fields: [caseId], references: [id])
+  content   String?
+  sections  Json?
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("reports")
+}
