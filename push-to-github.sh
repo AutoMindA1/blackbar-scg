@@ -32,6 +32,7 @@ git remote set-url origin https://github.com/AutoMindA1/blackbar-scg.git 2>/dev/
 # 4. Stage everything except Cases/benchmarks
 git add .gitignore README.md VOICE.md PIPELINE.md index.html
 git add BlackBar_Architecture.html BlackBar_For_Lane.html
+git add blackbar-gtm-sprint-strategy.html
 git add "2026-03-26_agent-team-pressure-test.md"
 git add agents/ Brand/ Docs/ Legal/ Media/ Workflows/
 

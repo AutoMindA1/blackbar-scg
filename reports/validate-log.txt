@@ -1,0 +1,18 @@
+========================================
+BLACK-BAR Validation — 2026-03-28T22:32:24Z
+========================================
+
+--- Check 1: Reference file placeholders ---
+
+--- Check 2: Markdown — unclosed code blocks ---
+FAIL: /Users/calebswainston/BLACK-BAR/reports/tier1-integration-gaps.md has unclosed fenced code block (65 fence lines)
+
+--- Check 3: UTF-8 encoding traps ---
+
+--- Check 4: Intake handoff required fields ---
+
+--- Check 5: Reference files — TBD/TODO/FIXME/XXX ---
+
+========================================
+FAILURES: 1
+See /Users/calebswainston/BLACK-BAR/reports/validate-log.txt for details

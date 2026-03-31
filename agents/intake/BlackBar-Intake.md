@@ -41,9 +41,26 @@ Attorney Address:
 Attorney Email:
 Attorney Phone:
 
+Nature of Matter: [short statement — e.g., "slip and fall on wet floor at casino buffet"]
 Defendant (full legal name as it appears in caption):
 Plaintiff Surname:
 Case Caption (for Subject line): [Defendant] adv [Plaintiff Surname]
+Opposing Counsel Name:
+Opposing Counsel Firm/Client:
+
+Contributory Negligence Strategy: YES / NO
+  (DEFAULT: YES — nearly universal in premises liability; only mark NO if counsel explicitly opts out)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LITIGATION TIMELINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Complaint Filed Date:
+Plaintiff Expert Disclosure Deadline:
+Defense Expert Disclosure Deadline:
+Trial Date:
+Client-Imposed Deadline (if any):
+Client Deadline Reason:
+Deadline Source: [Court / Client / Clio]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REPORT TYPE
