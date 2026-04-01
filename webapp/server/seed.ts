@@ -1,11 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
-
-function hashPassword(pw: string): string {
-  return crypto.createHash('sha256').update(pw).digest('hex');
-}
 
 async function main() {
   // Seed users
@@ -16,7 +12,7 @@ async function main() {
       id: 'usr_lane',
       name: 'Lane Swainston',
       email: 'lane@swainstonconsulting.com',
-      passwordHash: hashPassword('savage-wins-2026'),
+      passwordHash: await bcrypt.hash('savage-wins-2026', 12),
       role: 'admin',
     },
   });
@@ -28,7 +24,7 @@ async function main() {
       id: 'usr_mariz',
       name: 'Mariz Arellano',
       email: 'mariz@swainstonconsulting.com',
-      passwordHash: hashPassword('savage-wins-2026'),
+      passwordHash: await bcrypt.hash('savage-wins-2026', 12),
       role: 'operator',
     },
   });

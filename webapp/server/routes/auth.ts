@@ -1,15 +1,15 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 import { prisma } from '../db.js';
 import { AuthRequest, authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'blackbar-savage-wins-2026';
 
-function hashPassword(pw: string): string {
-  return crypto.createHash('sha256').update(pw).digest('hex');
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
 }
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // POST /api/auth/login
 router.post('/login', async (req: Request, res: Response) => {
@@ -19,7 +19,7 @@ router.post('/login', async (req: Request, res: Response) => {
     return;
   }
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.passwordHash !== hashPassword(password)) {
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     res.status(401).json({ error: 'Invalid credentials' });
     return;
   }
