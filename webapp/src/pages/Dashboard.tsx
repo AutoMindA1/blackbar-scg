@@ -14,21 +14,35 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const { cases, loading, fetchCases } = useCaseStore();
+  const { cases, loading, error, fetchCases } = useCaseStore();
   const navigate = useNavigate();
   const [showNewCase, setShowNewCase] = useState(false);
   const [newCaseName, setNewCaseName] = useState('');
   const [newCaseType, setNewCaseType] = useState('slip_fall');
   const [newReportType, setNewReportType] = useState('initial');
+  const [createError, setCreateError] = useState('');
+  const [creating, setCreating] = useState(false);
   const { createCase } = useCaseStore();
 
   useEffect(() => { fetchCases(); }, [fetchCases]);
 
+  useEffect(() => {
+    if (!showNewCase) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowNewCase(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showNewCase]);
+
   const handleCreateCase = async () => {
     if (!newCaseName.trim()) return;
-    const c = await createCase({ name: newCaseName, caseType: newCaseType, reportType: newReportType, jurisdiction: 'Clark County, Nevada' });
-    setShowNewCase(false); setNewCaseName('');
-    navigate(`/cases/${c.id}/intake`);
+    setCreateError(''); setCreating(true);
+    try {
+      const c = await createCase({ name: newCaseName, caseType: newCaseType, reportType: newReportType, jurisdiction: 'Clark County, Nevada' });
+      setShowNewCase(false); setNewCaseName('');
+      navigate(`/cases/${c.id}/intake`);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create case');
+    } finally { setCreating(false); }
   };
 
   const activeCases = cases.filter((c) => c.stage !== 'complete');
@@ -45,7 +59,7 @@ export default function Dashboard() {
       } />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { label: 'Active Cases', value: activeCases.length, icon: Briefcase, color: 'text-accent-primary' },
           { label: 'Completed', value: completedCases.length, icon: CheckCircle, color: 'text-success' },
@@ -69,6 +83,12 @@ export default function Dashboard() {
         </div>
         {loading ? (
           <div className="p-8 text-center text-text-muted">Loading cases...</div>
+        ) : error ? (
+          <div className="p-8 text-center">
+            <p className="text-error text-sm mb-2">Failed to load cases</p>
+            <p className="text-text-muted text-xs mb-3">{error}</p>
+            <button onClick={() => fetchCases()} className="text-xs text-accent-primary hover:underline">Retry</button>
+          </div>
         ) : cases.length === 0 ? (
           <div className="p-8 text-center text-text-muted">No cases yet. Create one to get started.</div>
         ) : (
@@ -129,10 +149,11 @@ export default function Dashboard() {
                   </select>
                 </div>
               </div>
+              {createError && <p className="text-error text-xs">{createError}</p>}
               <div className="flex gap-2 pt-2">
-                <button onClick={handleCreateCase}
-                  className="flex-1 bg-accent-primary hover:bg-accent-primary/90 text-white py-2.5 rounded-lg font-medium text-sm">
-                  Create Case
+                <button onClick={handleCreateCase} disabled={creating || !newCaseName.trim()}
+                  className="flex-1 bg-accent-primary hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 rounded-lg font-medium text-sm">
+                  {creating ? 'Creating...' : 'Create Case'}
                 </button>
                 <button onClick={() => setShowNewCase(false)}
                   className="px-4 py-2.5 bg-surface text-text-muted rounded-lg text-sm">Cancel</button>

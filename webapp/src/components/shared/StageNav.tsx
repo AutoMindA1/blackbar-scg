@@ -5,9 +5,9 @@ const STAGE_LABELS: Record<string, string> = {
   intake: 'Intake', research: 'Research', drafting: 'Drafting', qa: 'QA', export: 'Export',
 };
 
-interface Props { currentStage: string; onNavigate?: (stage: string) => void; }
+interface Props { currentStage: string; onNavigate?: (stage: string) => void; agentRunning?: boolean; }
 
-export default function StageNav({ currentStage, onNavigate }: Props) {
+export default function StageNav({ currentStage, onNavigate, agentRunning }: Props) {
   const currentIdx = STAGES.indexOf(currentStage as typeof STAGES[number]);
 
   return (
@@ -28,7 +28,8 @@ export default function StageNav({ currentStage, onNavigate }: Props) {
             `}
           >
             {isComplete && <Check className="w-4 h-4" />}
-            {isCurrent && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isCurrent && agentRunning && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isCurrent && !agentRunning && <Circle className="w-3 h-3 fill-accent-primary" />}
             {isFuture && <Circle className="w-3 h-3" />}
             {STAGE_LABELS[stage]}
           </button>

@@ -32,7 +32,7 @@ export default function CaseQA() {
   const { logs, status, connectSSE, disconnectSSE, triggerAgent, clearLogs } = useAgentStore();
   const [showCheckpoint, setShowCheckpoint] = useState(false);
 
-  useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id]);
+  useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
   useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
 
   const handleRunQA = async () => { if (!id) return; clearLogs(); await triggerAgent(id, 'qa'); };
@@ -44,7 +44,9 @@ export default function CaseQA() {
     navigate(`/cases/${id}/${nextStage}`);
   };
 
-  if (!activeCase) return <div className="text-text-muted">Loading...</div>;
+  const { error } = useCaseStore();
+  if (error) return <div className="p-8 text-center"><p className="text-error text-sm mb-2">Failed to load case</p><p className="text-text-muted text-xs">{error}</p></div>;
+  if (!activeCase) return <div className="p-8 text-center text-text-muted">Loading...</div>;
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
   const passCount = MOCK_CHECKS.filter((c) => c.status === 'pass').length;
   const score = Math.round((passCount / MOCK_CHECKS.length) * 100);
@@ -52,7 +54,7 @@ export default function CaseQA() {
   return (
     <div>
       <Header title={activeCase.name} subtitle="QA — Brain queries: §11 Benchmark Cases, §5 Prohibited Terms, §5 Identity/Date, §12 Format Rules" />
-      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} />
+      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} agentRunning={status === 'running'} />
 
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-6">
@@ -63,10 +65,14 @@ export default function CaseQA() {
             <p className="text-sm text-text-secondary mt-2">
               {passCount}/{MOCK_CHECKS.length} checks passed — {score >= 90 ? 'Courtroom ready' : 'Needs revision'}
             </p>
-            <button onClick={handleRunQA}
-              className="mt-4 px-4 py-2 bg-accent-primary/20 text-accent-primary rounded-lg text-sm hover:bg-accent-primary/30">
-              Run QA Agent
-            </button>
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <button onClick={handleRunQA}
+                disabled={status === 'running'}
+                className="px-4 py-2 bg-accent-primary/20 text-accent-primary rounded-lg text-sm hover:bg-accent-primary/30 disabled:opacity-50">
+                {status === 'running' ? 'Running...' : 'Run QA Agent'}
+              </button>
+              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-warning/20 text-warning">Sample Data</span>
+            </div>
           </div>
 
           {/* Check categories */}

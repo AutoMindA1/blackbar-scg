@@ -6,6 +6,7 @@ interface CaseState {
   cases: CaseSummary[];
   activeCase: CaseDetail | null;
   loading: boolean;
+  error: string | null;
   fetchCases: () => Promise<void>;
   fetchCase: (id: string) => Promise<void>;
   createCase: (data: CreateCasePayload) => Promise<CaseDetail>;
@@ -16,17 +17,26 @@ export const useCaseStore = create<CaseState>((set, get) => ({
   cases: [],
   activeCase: null,
   loading: false,
+  error: null,
 
   fetchCases: async () => {
-    set({ loading: true });
-    const { cases } = await api.getCases();
-    set({ cases, loading: false });
+    set({ loading: true, error: null });
+    try {
+      const { cases } = await api.getCases();
+      set({ cases, loading: false });
+    } catch (err) {
+      set({ loading: false, error: err instanceof Error ? err.message : 'Failed to load cases' });
+    }
   },
 
   fetchCase: async (id) => {
-    set({ loading: true });
-    const detail = await api.getCase(id);
-    set({ activeCase: detail, loading: false });
+    set({ loading: true, error: null });
+    try {
+      const detail = await api.getCase(id);
+      set({ activeCase: detail, loading: false });
+    } catch (err) {
+      set({ loading: false, error: err instanceof Error ? err.message : 'Failed to load case' });
+    }
   },
 
   createCase: async (data) => {

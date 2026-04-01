@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, FileText, Check } from 'lucide-react';
+import { Download, FileText, Check, AlertCircle } from 'lucide-react';
 import Header from '../components/layout/Header';
 import StageNav from '../components/shared/StageNav';
 import { useCaseStore } from '../stores/caseStore';
@@ -20,21 +20,22 @@ export default function CaseExport() {
     }
   }, [id]);
 
-  const handleDownload = async (format: string) => {
+  const handleDownloadHTML = () => {
     if (!id || !activeCase) return;
-    // Build the export HTML
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${activeCase.name}</title><style>body{font-family:'Times New Roman',serif;max-width:8.5in;margin:1in auto;line-height:1.6;text-align:justify;color:#111;}h2{text-decoration:underline;font-weight:normal;margin-top:1.5em;}ul{padding-left:1.5em;}li{margin:0.3em 0;}p{margin:0.5em 0;}</style></head><body><div style="text-align:center;margin-bottom:2em;"><h1 style="margin:0;">SWAINSTON CONSULTING GROUP</h1><p style="font-size:14px;color:#666;margin-top:4px;">Savage Wins</p></div><h3>${activeCase.name}</h3><h4>${activeCase.reportType === 'initial' ? 'Initial Report' : activeCase.reportType === 'rebuttal' ? 'Rebuttal Report' : 'Supplemental Report'}</h4><hr/>${reportContent}<hr/><p style="margin-top:2em;"><em>Sincerely,</em></p><p><strong>SWAINSTON CONSULTING GROUP</strong></p><br/><table><tr><td style="padding-right:4em;"><p>Lane Swainston CBO, CXLT, TCDS</p><p>Principal Consultant</p></td><td><p>Mariz Arellano, CXLT</p><p>Senior Consultant</p></td></tr></table></body></html>`;
 
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${activeCase.name.replace(/[^a-zA-Z0-9]/g, '_')}.${format === 'pdf' ? 'html' : 'html'}`;
+    a.download = `${activeCase.name.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  if (!activeCase) return <div className="text-text-muted">Loading...</div>;
+  const { error } = useCaseStore();
+  if (error) return <div className="p-8 text-center"><p className="text-error text-sm mb-2">Failed to load case</p><p className="text-text-muted text-xs">{error}</p></div>;
+  if (!activeCase) return <div className="p-8 text-center text-text-muted">Loading...</div>;
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
 
   return (
@@ -87,23 +88,41 @@ export default function CaseExport() {
 
           {/* QA status */}
           <div className="glass rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Check className="w-4 h-4 text-success" />
-              <span className="text-sm text-success font-medium">QA Approved</span>
-            </div>
-            <p className="text-xs text-text-secondary">Score: 94/100. All critical checks passed.</p>
+            {activeCase.stage === 'export' || activeCase.stage === 'complete' ? (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <Check className="w-4 h-4 text-success" />
+                  <span className="text-sm text-success font-medium">QA Approved</span>
+                </div>
+                <p className="text-xs text-text-secondary">Report has passed QA review.</p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertCircle className="w-4 h-4 text-warning" />
+                  <span className="text-sm text-warning font-medium">QA Pending</span>
+                </div>
+                <p className="text-xs text-text-secondary">Report has not yet passed QA review.</p>
+              </>
+            )}
           </div>
 
           {/* Download options */}
           <div className="glass rounded-xl p-5 space-y-3">
             <h3 className="text-sm font-semibold text-text-secondary">Download Options</h3>
-            <button onClick={() => handleDownload('pdf')}
+            <button onClick={handleDownloadHTML}
               className="w-full flex items-center justify-center gap-2 bg-accent-primary hover:bg-accent-primary/90 text-white font-semibold py-3 rounded-lg transition-colors">
-              <Download className="w-4 h-4" /> Download PDF
+              <Download className="w-4 h-4" /> Download HTML
             </button>
-            <button onClick={() => handleDownload('docx')}
-              className="w-full flex items-center justify-center gap-2 bg-surface border border-border text-text-secondary hover:text-text-primary py-3 rounded-lg transition-colors text-sm">
-              <Download className="w-4 h-4" /> Download DOCX
+            <button disabled
+              className="w-full flex items-center justify-center gap-2 bg-surface border border-border text-text-muted py-3 rounded-lg text-sm cursor-not-allowed opacity-50"
+              title="PDF export coming soon">
+              <Download className="w-4 h-4" /> Download PDF (Coming Soon)
+            </button>
+            <button disabled
+              className="w-full flex items-center justify-center gap-2 bg-surface border border-border text-text-muted py-3 rounded-lg text-sm cursor-not-allowed opacity-50"
+              title="DOCX export coming soon">
+              <Download className="w-4 h-4" /> Download DOCX (Coming Soon)
             </button>
           </div>
         </div>

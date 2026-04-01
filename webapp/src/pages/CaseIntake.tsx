@@ -18,7 +18,7 @@ export default function CaseIntake() {
   const [showCheckpoint, setShowCheckpoint] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id]);
+  useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
   useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
 
   const handleFiles = useCallback(async (files: FileList | File[]) => {
@@ -58,12 +58,14 @@ export default function CaseIntake() {
 
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
 
-  if (!activeCase) return <div className="text-text-muted">Loading case...</div>;
+  const { error } = useCaseStore();
+  if (error) return <div className="p-8 text-center"><p className="text-error text-sm mb-2">Failed to load case</p><p className="text-text-muted text-xs">{error}</p></div>;
+  if (!activeCase) return <div className="p-8 text-center text-text-muted">Loading case...</div>;
 
   return (
     <div>
       <Header title={activeCase.name} subtitle={`${activeCase.reportType || 'Initial'} Report — ${activeCase.jurisdiction || 'Clark County'}`} />
-      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} />
+      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} agentRunning={status === 'running'} />
 
       <div className="grid grid-cols-3 gap-6">
         {/* Left — Case Metadata */}

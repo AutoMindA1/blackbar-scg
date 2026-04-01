@@ -34,7 +34,12 @@ export const useAgentStore = create<AgentState>((set, get) => ({
 
   triggerAgent: async (caseId, stage, feedback) => {
     set({ status: 'running', logs: [] });
-    await api.triggerAgent(caseId, stage, feedback);
+    try {
+      await api.triggerAgent(caseId, stage, feedback);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Agent failed to start';
+      set((s) => ({ status: 'error', logs: [...s.logs, { type: 'error', message }] }));
+    }
   },
 
   clearLogs: () => set({ logs: [], status: 'idle' }),

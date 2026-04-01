@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, RotateCcw, XCircle, X } from 'lucide-react';
 
 interface Props {
@@ -17,6 +17,12 @@ const STAGE_LABELS: Record<string, string> = {
 export default function HumanCheckpoint({ stage, summary, onApprove, onRevise, onReject, onClose }: Props) {
   const [notes, setNotes] = useState('');
   const [mode, setMode] = useState<'actions' | 'revise'>('actions');
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
@@ -59,7 +65,8 @@ export default function HumanCheckpoint({ stage, summary, onApprove, onRevise, o
             />
             <div className="flex gap-2">
               <button onClick={() => { onRevise(notes); setNotes(''); setMode('actions'); }}
-                className="flex-1 px-4 py-2.5 bg-warning/20 text-warning rounded-lg hover:bg-warning/30 font-medium text-sm">
+                disabled={!notes.trim()}
+                className="flex-1 px-4 py-2.5 bg-warning/20 text-warning rounded-lg hover:bg-warning/30 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm">
                 Submit Revision Notes
               </button>
               <button onClick={() => setMode('actions')}

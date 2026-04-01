@@ -53,8 +53,9 @@ export default function CaseDrafting() {
   const [content, setContent] = useState('');
   const [showCheckpoint, setShowCheckpoint] = useState(false);
   const [activeSection, setActiveSection] = useState(0);
+  const [editMode, setEditMode] = useState(false);
 
-  useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id]);
+  useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
   useEffect(() => {
     if (activeCase?.report?.content) setContent(activeCase.report.content);
     else setContent(DEFAULT_CONTENT);
@@ -80,13 +81,15 @@ export default function CaseDrafting() {
     navigate(`/cases/${id}/${nextStage}`);
   };
 
-  if (!activeCase) return <div className="text-text-muted">Loading...</div>;
+  const { error } = useCaseStore();
+  if (error) return <div className="p-8 text-center"><p className="text-error text-sm mb-2">Failed to load case</p><p className="text-text-muted text-xs">{error}</p></div>;
+  if (!activeCase) return <div className="p-8 text-center text-text-muted">Loading...</div>;
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
 
   return (
     <div>
       <Header title={activeCase.name} subtitle="Drafting — Brain queries: §5 Voice Rules, §7 Standard Blocks, §4 Report Structure, §12 Format Rules" />
-      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} />
+      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} agentRunning={status === 'running'} />
 
       <div className="grid grid-cols-12 gap-6">
         {/* Section nav */}
@@ -113,12 +116,30 @@ export default function CaseDrafting() {
         {/* Editor */}
         <div className="col-span-7">
           <div className="glass rounded-xl p-6 min-h-[600px]">
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full min-h-[550px] bg-transparent text-sm text-text-primary leading-relaxed resize-none focus:outline-none font-body"
-              style={{ textAlign: 'justify' }}
-            />
+            <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
+              <div className="flex gap-2">
+                <button onClick={() => setEditMode(false)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${!editMode ? 'bg-accent-glow text-accent-primary' : 'text-text-muted hover:text-text-secondary'}`}>
+                  Preview
+                </button>
+                <button onClick={() => setEditMode(true)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editMode ? 'bg-accent-glow text-accent-primary' : 'text-text-muted hover:text-text-secondary'}`}>
+                  Edit Source
+                </button>
+              </div>
+            </div>
+            {editMode ? (
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full min-h-[520px] bg-transparent text-sm text-text-primary leading-relaxed resize-none focus:outline-none font-mono"
+              />
+            ) : (
+              <div
+                className="prose prose-invert prose-sm max-w-none min-h-[520px] text-text-secondary [&_h2]:underline [&_h2]:font-normal [&_h2]:text-text-primary [&_p]:text-justify"
+                dangerouslySetInnerHTML={{ __html: content }}
+              />
+            )}
           </div>
           <div className="flex gap-3 mt-4">
             <button onClick={() => setShowCheckpoint(true)}

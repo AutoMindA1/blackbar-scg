@@ -52,7 +52,7 @@ export default function CaseResearch() {
   const { logs, status, connectSSE, disconnectSSE, triggerAgent, clearLogs } = useAgentStore();
   const [showCheckpoint, setShowCheckpoint] = useState(false);
 
-  useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id]);
+  useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
   useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
 
   const handleRunResearch = async () => {
@@ -68,14 +68,16 @@ export default function CaseResearch() {
     navigate(`/cases/${id}/${nextStage}`);
   };
 
-  if (!activeCase) return <div className="text-text-muted">Loading...</div>;
+  const { error } = useCaseStore();
+  if (error) return <div className="p-8 text-center"><p className="text-error text-sm mb-2">Failed to load case</p><p className="text-text-muted text-xs">{error}</p></div>;
+  if (!activeCase) return <div className="p-8 text-center text-text-muted">Loading...</div>;
 
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
 
   return (
     <div>
       <Header title={activeCase.name} subtitle="Research — Brain queries: §6 Attack Patterns, §8 Standards & Codes, §10 Known Adversary, §9 Instruments" />
-      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} />
+      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} agentRunning={status === 'running'} />
 
       <div className="grid grid-cols-3 gap-6">
         {/* Research summary + findings */}
@@ -91,10 +93,14 @@ export default function CaseResearch() {
                 <span>12 citations</span>
               </div>
             </div>
-            <button onClick={handleRunResearch}
-              className="px-4 py-2 bg-accent-primary/20 text-accent-primary rounded-lg text-sm hover:bg-accent-primary/30 transition-colors mb-4">
-              Run Research Agent
-            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <button onClick={handleRunResearch}
+                disabled={status === 'running'}
+                className="px-4 py-2 bg-accent-primary/20 text-accent-primary rounded-lg text-sm hover:bg-accent-primary/30 disabled:opacity-50 transition-colors">
+                {status === 'running' ? 'Running...' : 'Run Research Agent'}
+              </button>
+              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-warning/20 text-warning">Sample Data</span>
+            </div>
           </div>
 
           {/* Citation cards */}
