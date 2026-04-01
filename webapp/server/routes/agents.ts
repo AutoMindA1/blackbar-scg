@@ -1,9 +1,12 @@
 import { Router, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../db.js';
 import { AuthRequest, authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 router.use(authMiddleware);
+
+const validStages = ['intake', 'research', 'drafting', 'qa'] as const;
 
 // Brain section mapping per agent stage
 const BRAIN_QUERIES: Record<string, string[]> = {
@@ -73,10 +76,23 @@ function broadcastToCase(caseId: string, data: object) {
   }
 }
 
+const uuidParam = z.string().uuid();
+const triggerAgentSchema = z.object({
+  feedback: z.string().max(2000).optional(),
+});
+const approveSchema = z.object({
+  stage: z.enum(['intake', 'research', 'drafting', 'qa', 'export']),
+  action: z.enum(['approve', 'revise', 'reject']),
+  notes: z.string().max(2000).optional(),
+});
+
 // POST /api/cases/:id/agents/:stage — trigger mock agent
 router.post('/:id/agents/:stage', async (req: AuthRequest, res: Response) => {
+  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const { id, stage } = req.params;
-  const { feedback } = req.body;
+  const parsed = triggerAgentSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'Invalid input' }); return; }
+  const { feedback } = parsed.data;
   const messages = MOCK_STREAMS[stage];
   if (!messages) { res.status(400).json({ error: 'Invalid stage' }); return; }
 
@@ -105,12 +121,12 @@ router.post('/:id/agents/:stage', async (req: AuthRequest, res: Response) => {
 
 // GET /api/cases/:id/agents/stream — SSE endpoint
 router.get('/:id/agents/stream', (req: AuthRequest, res: Response) => {
+  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const caseId = req.params.id;
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
   });
   res.write(`data: ${JSON.stringify({ type: 'connected', message: 'SSE stream connected' })}\n\n`);
 
@@ -125,7 +141,10 @@ router.get('/:id/agents/stream', (req: AuthRequest, res: Response) => {
 
 // POST /api/cases/:id/approve — human checkpoint
 router.post('/:id/approve', async (req: AuthRequest, res: Response) => {
-  const { stage, action, notes } = req.body;
+  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  const parsed = approveSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() }); return; }
+  const { stage, action, notes } = parsed.data;
   const stageOrder = ['intake', 'research', 'drafting', 'qa', 'export', 'complete'];
   const currentIdx = stageOrder.indexOf(stage);
 

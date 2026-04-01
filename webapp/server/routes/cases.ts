@@ -1,14 +1,37 @@
 import { Router, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../db.js';
 import { AuthRequest, authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 router.use(authMiddleware);
 
+const createCaseSchema = z.object({
+  name: z.string().min(1).max(500).trim(),
+  caseType: z.string().max(100).optional(),
+  reportType: z.string().max(100).optional(),
+  jurisdiction: z.string().max(200).optional(),
+  opposingExpert: z.string().max(300).optional(),
+  deadline: z.string().datetime().optional().nullable(),
+});
+
+const updateCaseSchema = z.object({
+  name: z.string().min(1).max(500).trim().optional(),
+  caseType: z.string().max(100).optional().nullable(),
+  reportType: z.string().max(100).optional().nullable(),
+  jurisdiction: z.string().max(200).optional().nullable(),
+  opposingExpert: z.string().max(300).optional().nullable(),
+  deadline: z.string().datetime().optional().nullable(),
+  stage: z.enum(['intake', 'research', 'drafting', 'qa', 'export', 'complete']).optional(),
+});
+
+const uuidParam = z.string().uuid();
+
 // POST /api/cases
 router.post('/', async (req: AuthRequest, res: Response) => {
-  const { name, caseType, reportType, jurisdiction, opposingExpert, deadline } = req.body;
-  if (!name) { res.status(400).json({ error: 'Case name required' }); return; }
+  const parsed = createCaseSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() }); return; }
+  const { name, caseType, reportType, jurisdiction, opposingExpert, deadline } = parsed.data;
   const c = await prisma.case.create({
     data: {
       name,
@@ -47,6 +70,7 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
 
 // GET /api/cases/:id
 router.get('/:id', async (req: AuthRequest, res: Response) => {
+  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const c = await prisma.case.findUnique({
     where: { id: req.params.id },
     include: { documents: true, agentLogs: { orderBy: { createdAt: 'desc' }, take: 50 }, report: true },
@@ -57,13 +81,11 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
 // PATCH /api/cases/:id
 router.patch('/:id', async (req: AuthRequest, res: Response) => {
-  const allowed = ['name', 'caseType', 'reportType', 'jurisdiction', 'opposingExpert', 'deadline', 'stage'];
-  const data: Record<string, unknown> = {};
-  for (const key of allowed) {
-    if (req.body[key] !== undefined) {
-      data[key] = key === 'deadline' && req.body[key] ? new Date(req.body[key]) : req.body[key];
-    }
-  }
+  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  const parsed = updateCaseSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() }); return; }
+  const data: Record<string, unknown> = { ...parsed.data };
+  if (data.deadline) data.deadline = new Date(data.deadline as string);
   const c = await prisma.case.update({ where: { id: req.params.id }, data });
   res.json(c);
 });
