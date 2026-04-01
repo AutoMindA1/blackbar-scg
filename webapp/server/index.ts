@@ -27,6 +27,11 @@ app.use('/api/cases', reportRoutes);     // GET /:id/report, PUT /:id/report, PO
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// Serve Vite build in production
+const distPath = path.join(__dirname, '..', 'dist');
+app.use(express.static(distPath));
+app.get('/{*splat}', (_req, res) => res.sendFile(path.join(distPath, 'index.html')));
+
 app.listen(PORT, () => {
   console.log(`BlackBar API running on http://localhost:${PORT}`);
   console.log('Endpoints: auth(2) + cases(4) + documents(2) + agents(3) + reports(3) = 14');

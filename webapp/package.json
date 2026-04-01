@@ -13,7 +13,8 @@
     "db:generate": "dotenv -e ../.env -- prisma generate",
     "db:push": "dotenv -e ../.env -- prisma db push",
     "db:seed": "dotenv -e ../.env -- tsx server/seed.ts",
-    "db:setup": "npm run db:push && npm run db:seed"
+    "db:setup": "npm run db:push && npm run db:seed",
+    "start": "tsx server/index.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
