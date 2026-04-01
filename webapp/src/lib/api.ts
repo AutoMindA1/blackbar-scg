@@ -10,8 +10,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'Request failed');
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    const err = new Error(body.error || 'Request failed') as Error & { status: number };
+    err.status = res.status;
+    throw err;
   }
   return res.json();
 }
