@@ -6,7 +6,7 @@ import { AuthRequest, authMiddleware } from '../middleware/auth.js';
 const router = Router();
 router.use(authMiddleware);
 
-const uuidParam = z.string().uuid();
+const caseIdParam = z.string().min(1).max(100);
 const updateReportSchema = z.object({
   content: z.string().max(500000),
 });
@@ -16,7 +16,7 @@ const exportSchema = z.object({
 
 // GET /api/cases/:id/report
 router.get('/:id/report', async (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const report = await prisma.report.findUnique({ where: { caseId: req.params.id } });
   if (!report) { res.status(404).json({ error: 'No report found' }); return; }
   res.json({ content: report.content, sections: report.sections, version: report.version });
@@ -24,7 +24,7 @@ router.get('/:id/report', async (req: AuthRequest, res: Response) => {
 
 // PUT /api/cases/:id/report
 router.put('/:id/report', async (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const parsed = updateReportSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() }); return; }
   const { content } = parsed.data;
@@ -44,7 +44,7 @@ router.put('/:id/report', async (req: AuthRequest, res: Response) => {
 
 // POST /api/cases/:id/export
 router.post('/:id/export', async (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const parsed = exportSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Format must be pdf or docx' }); return; }
   const report = await prisma.report.findUnique({ where: { caseId: req.params.id } });

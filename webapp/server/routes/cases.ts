@@ -25,7 +25,7 @@ const updateCaseSchema = z.object({
   stage: z.enum(['intake', 'research', 'drafting', 'qa', 'export', 'complete']).optional(),
 });
 
-const uuidParam = z.string().uuid();
+const caseIdParam = z.string().min(1).max(100);
 
 // POST /api/cases
 router.post('/', async (req: AuthRequest, res: Response) => {
@@ -70,7 +70,7 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
 
 // GET /api/cases/:id
 router.get('/:id', async (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const c = await prisma.case.findUnique({
     where: { id: req.params.id },
     include: { documents: true, agentLogs: { orderBy: { createdAt: 'desc' }, take: 50 }, report: true },
@@ -81,7 +81,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
 // PATCH /api/cases/:id
 router.patch('/:id', async (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const parsed = updateCaseSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() }); return; }
   const data: Record<string, unknown> = { ...parsed.data };

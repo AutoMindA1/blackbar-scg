@@ -76,7 +76,7 @@ function broadcastToCase(caseId: string, data: object) {
   }
 }
 
-const uuidParam = z.string().uuid();
+const caseIdParam = z.string().min(1).max(100);
 const triggerAgentSchema = z.object({
   feedback: z.string().max(2000).optional(),
 });
@@ -88,7 +88,7 @@ const approveSchema = z.object({
 
 // POST /api/cases/:id/agents/:stage — trigger mock agent
 router.post('/:id/agents/:stage', async (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const { id, stage } = req.params;
   const parsed = triggerAgentSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Invalid input' }); return; }
@@ -121,7 +121,7 @@ router.post('/:id/agents/:stage', async (req: AuthRequest, res: Response) => {
 
 // GET /api/cases/:id/agents/stream — SSE endpoint
 router.get('/:id/agents/stream', (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const caseId = req.params.id;
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -141,7 +141,7 @@ router.get('/:id/agents/stream', (req: AuthRequest, res: Response) => {
 
 // POST /api/cases/:id/approve — human checkpoint
 router.post('/:id/approve', async (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const parsed = approveSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() }); return; }
   const { stage, action, notes } = parsed.data;

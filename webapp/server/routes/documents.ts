@@ -43,11 +43,11 @@ const upload = multer({
   },
 });
 
-const uuidParam = z.string().uuid();
+const caseIdParam = z.string().min(1).max(100);
 
 // POST /api/cases/:id/documents
 router.post('/:id/documents', upload.array('files', 20), async (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const files = req.files as Express.Multer.File[];
   if (!files?.length) { res.status(400).json({ error: 'No files uploaded' }); return; }
   const docs = await Promise.all(
@@ -68,7 +68,7 @@ router.post('/:id/documents', upload.array('files', 20), async (req: AuthRequest
 
 // GET /api/cases/:id/documents
 router.get('/:id/documents', async (req: AuthRequest, res: Response) => {
-  if (!uuidParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
+  if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const docs = await prisma.document.findMany({ where: { caseId: req.params.id }, orderBy: { uploadedAt: 'desc' } });
   res.json({ documents: docs });
 });
