@@ -82,6 +82,78 @@ function extractBrainSections(sectionRefs: string[]): string {
   return sections.join('\n\n---\n\n');
 }
 
+// Per-stage structured-output contracts. Appended to every system prompt so
+// the agent's final response always ends with a parseable JSON summary block
+// matching the interface in webapp/server/types/agentContracts.ts.
+const STAGE_OUTPUT_CONTRACTS: Record<string, string> = {
+  intake: `## OUTPUT CONTRACT (REQUIRED)
+After your prose analysis, end your response with a single fenced JSON block matching this schema EXACTLY. The block must be the LAST thing in your response. Do not wrap it in commentary.
+
+\`\`\`json
+{
+  "documents": [
+    { "name": "string", "type": "deposition|expert_report|code_standard|photograph|contract|correspondence|other", "pages": 0 }
+  ],
+  "flags": ["string"],
+  "missingFields": ["string"],
+  "caseType": "string",
+  "reportType": "string"
+}
+\`\`\``,
+
+  research: `## OUTPUT CONTRACT (REQUIRED)
+After your prose analysis, end your response with a single fenced JSON block matching this schema EXACTLY. The block must be the LAST thing in your response.
+
+\`\`\`json
+{
+  "findings": [
+    {
+      "id": "F-1",
+      "opposingClaim": "string",
+      "codeReference": "string",
+      "reasoning": "string",
+      "attackPattern": "ATK-XX",
+      "sourceDocument": "string",
+      "sourcePage": 0
+    }
+  ],
+  "standardsReferenced": ["string"],
+  "attackPatternsUsed": ["ATK-XX"]
+}
+\`\`\``,
+
+  drafting: `## OUTPUT CONTRACT (REQUIRED)
+After drafting the report, end your response with a single fenced JSON block matching this schema EXACTLY. The block must be the LAST thing in your response.
+
+\`\`\`json
+{
+  "sections": [
+    { "title": "string", "wordCount": 0, "hasPlaceholders": false }
+  ],
+  "totalWordCount": 0,
+  "placeholders": ["string"],
+  "voiceScore": 0,
+  "benchmarkUsed": "string"
+}
+\`\`\``,
+
+  qa: `## OUTPUT CONTRACT (REQUIRED)
+After your QA pass, end your response with a single fenced JSON block matching this schema EXACTLY. The block must be the LAST thing in your response.
+
+\`\`\`json
+{
+  "score": 0,
+  "benchmarkMatch": 0,
+  "checks": [
+    { "name": "string", "status": "pass|warning|fail", "detail": "string" }
+  ],
+  "issues": [
+    { "severity": "critical|warning|info", "description": "string", "location": "string" }
+  ]
+}
+\`\`\``,
+};
+
 // Brain section mapping per agent stage (from audit)
 const STAGE_BRAIN_REFS: Record<string, string[]> = {
   intake: ['§3 Case Taxonomy', '§4 Report Types', '§8 Code Citation', '§2 Personnel'],
@@ -173,7 +245,11 @@ ${voice}
 ## ENTERPRISE BRAIN (relevant sections for ${stage} stage)
 Use this domain knowledge to ground your analysis. Do not invent facts — cite from this document.
 
-${brainSections}`;
+${brainSections}
+
+---
+
+${STAGE_OUTPUT_CONTRACTS[stage] ?? ''}`;
 }
 
 export function getBrainQueries(stage: string): string[] {

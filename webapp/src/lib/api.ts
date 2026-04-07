@@ -120,6 +120,74 @@ export interface QAScorecard {
   issues: { severity: 'critical' | 'warning' | 'info'; description: string; location: string }[];
 }
 
+// Typed agent contract outputs — mirror of webapp/server/types/agentContracts.ts.
+// Each pipeline stage emits a JSON summary block at the end of its response;
+// the server validates and persists it as agent_logs.metadata.parsed on the
+// `complete` row, and the same object is broadcast on the SSE complete event.
+
+export interface IntakeResult {
+  documents: Array<{
+    name: string;
+    type: 'deposition' | 'expert_report' | 'code_standard' | 'photograph' | 'contract' | 'correspondence' | 'other';
+    pages: number;
+  }>;
+  flags: string[];
+  missingFields: string[];
+  caseType: string;
+  reportType: string;
+}
+
+export interface ResearchResult {
+  findings: Array<{
+    id: string;
+    opposingClaim: string;
+    codeReference: string;
+    reasoning: string;
+    attackPattern: string;
+    sourceDocument: string;
+    sourcePage: number;
+  }>;
+  standardsReferenced: string[];
+  attackPatternsUsed: string[];
+}
+
+export interface DraftingResult {
+  sections: Array<{ title: string; wordCount: number; hasPlaceholders: boolean }>;
+  totalWordCount: number;
+  placeholders: string[];
+  voiceScore: number;
+  benchmarkUsed: string;
+}
+
+// Type-safe parsers — pull a typed result out of an SSE/log message's metadata.
+// Return null if the metadata is missing or fails the structural check, so the
+// calling component can render a graceful fallback UI.
+
+function isObj(x: unknown): x is Record<string, unknown> {
+  return !!x && typeof x === 'object';
+}
+
+export function parseIntakeFromMetadata(meta: Record<string, unknown> | null | undefined): IntakeResult | null {
+  const p = meta?.parsed;
+  if (!isObj(p)) return null;
+  if (!Array.isArray(p.documents) || !Array.isArray(p.flags) || !Array.isArray(p.missingFields)) return null;
+  return p as unknown as IntakeResult;
+}
+
+export function parseResearchFromMetadata(meta: Record<string, unknown> | null | undefined): ResearchResult | null {
+  const p = meta?.parsed;
+  if (!isObj(p)) return null;
+  if (!Array.isArray(p.findings) || !Array.isArray(p.standardsReferenced) || !Array.isArray(p.attackPatternsUsed)) return null;
+  return p as unknown as ResearchResult;
+}
+
+export function parseDraftingFromMetadata(meta: Record<string, unknown> | null | undefined): DraftingResult | null {
+  const p = meta?.parsed;
+  if (!isObj(p)) return null;
+  if (!Array.isArray(p.sections) || typeof p.totalWordCount !== 'number' || !Array.isArray(p.placeholders)) return null;
+  return p as unknown as DraftingResult;
+}
+
 export interface CreateCasePayload {
   name: string; caseType?: string; reportType?: string;
   jurisdiction?: string; opposingExpert?: string; deadline?: string;

@@ -1,6 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../db.js';
 import { buildSystemPrompt, getBrainQueries } from './promptLoader.js';
+import {
+  AgentResult as TypedAgentResult,
+  FALLBACKS,
+  isDraftingResult,
+  isIntakeResult,
+  isQAResult,
+  isResearchResult,
+} from '../types/agentContracts.js';
 
 const SUPERVISED_MODE = process.env.SUPERVISED_MODE === 'true';
 
@@ -30,6 +38,10 @@ export interface AgentBroadcast {
  * effects), so this interface describes the *future* refactor where prowl is
  * actually wired up. Today it exists so type-only imports compile cleanly.
  */
+// Wrapper used by the (currently dormant) prowl/sentinel speculative-run path.
+// Distinct from the per-stage TypedAgentResult union in
+// ../types/agentContracts.ts, which describes the structured JSON each agent
+// emits at the end of its response.
 export interface AgentResult {
   output: unknown;
   stage?: string;
@@ -133,6 +145,54 @@ export function parseQAScorecard(fullResponse: string): QAScorecard | null {
     console.warn('[agentRunner] Failed to parse QA JSON block:', err instanceof Error ? err.message : err);
     return null;
   }
+}
+
+// Generic structured-output parser for any pipeline stage.
+//
+// Looks for the LAST ```json fenced block in the agent's raw response,
+// validates it against the per-stage interface in ../types/agentContracts.ts,
+// and returns the parsed object. On any failure (no block, bad JSON, schema
+// mismatch) returns the minimal valid fallback for that stage and logs an
+// info message — never throws.
+export function parseAgentOutput(stage: string, rawOutput: string): TypedAgentResult {
+  const fallback = FALLBACKS[stage as keyof typeof FALLBACKS] ?? FALLBACKS.intake;
+
+  // Find the LAST ```json ... ``` fence (per contract: must be the final block)
+  const fenceRegex = /```json\s*([\s\S]*?)```/gi;
+  let lastMatch: RegExpExecArray | null = null;
+  let m: RegExpExecArray | null;
+  while ((m = fenceRegex.exec(rawOutput)) !== null) {
+    lastMatch = m;
+  }
+
+  if (!lastMatch) {
+    console.info(`[agentRunner] ${stage}: agent output did not contain a JSON block — using fallback`);
+    return fallback;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(lastMatch[1].trim());
+  } catch (err) {
+    console.info(`[agentRunner] ${stage}: agent output did not match expected schema (JSON parse failed: ${err instanceof Error ? err.message : err})`);
+    return fallback;
+  }
+
+  let valid = false;
+  switch (stage) {
+    case 'intake':   valid = isIntakeResult(parsed); break;
+    case 'research': valid = isResearchResult(parsed); break;
+    case 'drafting': valid = isDraftingResult(parsed); break;
+    case 'qa':       valid = isQAResult(parsed); break;
+    default:         valid = false;
+  }
+
+  if (!valid) {
+    console.info(`[agentRunner] ${stage}: agent output did not match expected schema — using fallback`);
+    return fallback;
+  }
+
+  return parsed as TypedAgentResult;
 }
 
 function broadcast(broadcastFn: BroadcastFn, caseId: string, stage: string, type: string, message: string, metadata?: Record<string, unknown>) {
@@ -246,6 +306,12 @@ export async function runAgent(
       }
     }
 
+    // Typed agent contract output (intake/research/drafting). For QA we keep
+    // the existing parseQAScorecard path so the working /api/cases/:id/qa
+    // endpoint and CaseQA UI do not regress.
+    const parsedTyped: TypedAgentResult | null =
+      stage === 'qa' ? null : parseAgentOutput(stage, fullResponse);
+
     const completeMessage = qaScorecard
       ? `qa complete — score ${qaScorecard.score}/100`
       : `${stage} complete — ${findingCount} findings`;
@@ -257,6 +323,7 @@ export async function runAgent(
       },
     };
     if (qaScorecard) completeMetadata.qa = qaScorecard;
+    if (parsedTyped) completeMetadata.parsed = parsedTyped;
 
     // Persist the full response
     await persistLog(caseId, stage, 'complete', completeMessage, completeMetadata);
@@ -297,6 +364,7 @@ export async function runAgent(
         findingCount,
         tokenUsage: finalMessage.usage,
         ...(qaScorecard ? { qa: qaScorecard } : {}),
+        ...(parsedTyped ? { parsed: parsedTyped } : {}),
       },
     );
 

@@ -67,3 +67,4 @@ Sequential: Intake → Research → Drafting → QA
 - **NEVER** add `tsx` as a production dependency. It belongs in `devDependencies` only and is permitted only in `dev`/`dev:server`/`db:seed` style scripts that exist for local development.
 - **Railway runs the `package.json` `start` script.** It must always be `node dist/server/index.js`. The `build` script is responsible for emitting the server JS to `dist/server/`. If you change one, audit the other.
 - Prowl is dormant. Do not wire prowl.ts, sentinel.ts, or pipelineMetrics.ts into production routes until runAgent returns AgentResult and acceptance-rate data exists from 20+ real cases.
+- NEVER modify schema.prisma without creating a Prisma migration. Run `npx prisma migrate dev --name <description>` for every schema change.

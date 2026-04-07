@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, Check } from 'lucide-react';
 import Header from '../components/layout/Header';
@@ -13,7 +13,7 @@ import SectionReview from '../components/shared/SectionReview';
 import RevisionPanel from '../components/shared/RevisionPanel';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
-import { api } from '../lib/api';
+import { api, parseDraftingFromMetadata } from '../lib/api';
 
 const DEFAULT_CONTENT = `<h2>Qualifications</h2>
 <p>Lane Swainston is a Certified Building Official (CBO) with the International Code Council (ICC), a position he has held since 1987. He holds additional certifications as a Certified XL Tribometrist (CXLT) through Excel Tribometers, LLC, and as a Walkway Safety Auditor (ASTM F2948-13) through the University of North Texas.</p>
@@ -68,6 +68,19 @@ export default function CaseDrafting() {
   const stageOrder = ['intake', 'research', 'drafting', 'qa', 'export'];
   const currentIdx = stageOrder.indexOf(activeCase?.stage || 'drafting');
   const completedStages = stageOrder.slice(0, currentIdx);
+
+  // Pull the typed DraftingResult off the latest `complete` SSE event so the
+  // checkpoint summary can show real section/word counts.
+  const draftingResult = useMemo(() => {
+    const completeLog = [...logs].reverse().find((l) => l.type === 'complete');
+    return parseDraftingFromMetadata(completeLog?.metadata);
+  }, [logs]);
+
+  const draftingCheckpointSummary = draftingResult
+    ? `Draft complete — ${draftingResult.sections.length} section${draftingResult.sections.length === 1 ? '' : 's'}, ${draftingResult.totalWordCount.toLocaleString()} words${
+        draftingResult.placeholders.length > 0 ? `, ${draftingResult.placeholders.length} placeholder${draftingResult.placeholders.length === 1 ? '' : 's'}` : ''
+      }${draftingResult.voiceScore > 0 ? ` · voice ${draftingResult.voiceScore}/100` : ''}.`
+    : 'Draft complete — sections generated with entity voice maintained throughout.';
 
   const { error } = useCaseStore();
   if (error) return <div className="p-8 text-center"><p className="text-[var(--color-error)] text-sm mb-2">Failed to load case</p></div>;
@@ -128,7 +141,7 @@ export default function CaseDrafting() {
       {showCheckpoint && (
         <HumanCheckpointV2
           stage="drafting"
-          summary="Draft complete — sections generated with entity voice maintained throughout."
+          summary={draftingCheckpointSummary}
           onApprove={handleApprove}
           onRevise={async (notes) => { await handleRevise(notes); setShowCheckpoint(false); }}
           onReject={() => setShowCheckpoint(false)}
