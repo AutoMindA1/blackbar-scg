@@ -6,8 +6,16 @@ if (!process.env.JWT_SECRET) {
 }
 const JWT_SECRET = process.env.JWT_SECRET;
 
-export interface AuthRequest extends Request {
+/**
+ * Express 5 widened `Request['params']` to `string | string[]` per key (to
+ * support repeated `?key=a&key=b` semantics on path params). All BlackBar
+ * routes use simple `:id` / `:stage` style params that are always single
+ * strings, so we narrow back to `Record<string, string>` here. This keeps
+ * the route handlers from having to coerce on every access.
+ */
+export interface AuthRequest extends Omit<Request, 'params'> {
   userId?: string;
+  params: Record<string, string>;
 }
 
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {

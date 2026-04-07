@@ -180,6 +180,19 @@ export function getBrainQueries(stage: string): string[] {
   return STAGE_BRAIN_REFS[stage] || [];
 }
 
+/**
+ * Load a single named prompt resource. Used by sentinel.ts and any other
+ * service that needs the raw VOICE.md or ENTERPRISE_BRAIN.md content.
+ *
+ * Returns a Promise so callers can `await` it without caring whether the
+ * underlying read is sync (cached) or async.
+ */
+export async function loadPrompt(kind: 'voice' | 'brain'): Promise<string> {
+  if (kind === 'voice') return loadVoice();
+  if (kind === 'brain') return loadBrain();
+  throw new Error(`loadPrompt: unknown kind "${kind}"`);
+}
+
 // Invalidate cache (for hot-reload in dev)
 export function invalidateCache(): void {
   voiceCache = null;

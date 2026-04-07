@@ -24,6 +24,19 @@ export interface AgentBroadcast {
   stage: string;
 }
 
+/**
+ * Shape consumed by prowl.ts / sentinel.ts when they wrap a speculative agent
+ * run. The current `runAgent()` is fire-and-forget (returns void via SSE side
+ * effects), so this interface describes the *future* refactor where prowl is
+ * actually wired up. Today it exists so type-only imports compile cleanly.
+ */
+export interface AgentResult {
+  output: unknown;
+  stage?: string;
+  caseId?: string;
+  tokenUsage?: { input: number; output: number };
+}
+
 type BroadcastFn = (caseId: string, data: AgentBroadcast) => void;
 
 // Build user prompt from case data and documents
@@ -296,8 +309,11 @@ export async function runAgent(
 }
 
 async function persistLog(caseId: string, stage: string, type: string, message: string, metadata?: Record<string, unknown>) {
+  // Prisma's JSON column accepts InputJsonValue; cast through unknown so the
+  // generic Record<string, unknown> shape is accepted.
   await prisma.agentLog.create({
-    data: { caseId, stage, type, message, metadata: metadata || undefined },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: { caseId, stage, type, message, metadata: (metadata ?? undefined) as any },
   }).catch((err) => console.error('[agentRunner] Failed to persist log:', err));
 }
 

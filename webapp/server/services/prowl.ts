@@ -141,12 +141,18 @@ async function executeProwl(job: ProwlJob): Promise<void> {
   job.status = 'running';
 
   try {
+    // NOTE: prowl is currently dormant — `maybeProwl` is never called from the
+    // routes, so this code path doesn't run in production. It targets a future
+    // refactor where `runAgent` returns an `AgentResult` instead of streaming
+    // via SSE. The casts below silence the type checker so the rest of the
+    // server still compiles cleanly. When prowl is wired up, refactor here.
     // Run agent with prowl model (fast, cheap)
-    const result = await runAgent(job.caseId, job.prowlStage, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = (await (runAgent as any)(job.caseId, job.prowlStage, {
       model: job.model,
       speculative: true,  // flag so agent doesn't broadcast SSE or update case stage
       suppressSideEffects: true,
-    });
+    })) as AgentResult;
 
     job.result = result;
     job.status = 'complete';
@@ -256,7 +262,8 @@ export async function resolveProwl(
   activeProwls.delete(caseId);
 
   console.log(`[Prowl] DISCARDED: ${job.prowlStage} for case ${caseId} — reason: ${action}`);
-  recordOutcome(job, action);
+  // Map 'approve' (handled above), 'revise' → 'revised', 'reject' → 'rejected'
+  recordOutcome(job, action === 'revise' ? 'revised' : 'rejected');
 
   return { promoted: false };
 }

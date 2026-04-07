@@ -7,14 +7,15 @@
     "dev": "concurrently \"vite\" \"tsx --env-file=../.env server/index.ts\"",
     "dev:client": "vite",
     "dev:server": "tsx --env-file=../.env server/index.ts",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && tsc -p tsconfig.server.json",
+    "build:server": "tsc -p tsconfig.server.json",
     "lint": "eslint .",
     "preview": "vite preview",
     "db:generate": "dotenv -e ../.env -- prisma generate",
     "db:push": "dotenv -e ../.env -- prisma db push",
     "db:seed": "dotenv -e ../.env -- tsx server/seed.ts",
     "db:setup": "npm run db:push && npm run db:seed",
-    "start": "tsx server/index.ts"
+    "start": "node dist/server/index.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

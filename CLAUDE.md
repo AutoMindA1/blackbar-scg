@@ -59,3 +59,10 @@ Sequential: Intake → Research → Drafting → QA
 - Assume Prisma version — it is 6.19, check package.json
 - cd into BLACK-BAR when user said Bloom Soft (or vice versa)
 - Create files in Cases/ or benchmarks/ without explicit request
+
+## HARD RULES — DO NOT VIOLATE
+
+- **NEVER** use `tsx` in any `start` script or any production build command. Production runs compiled JS only: `node dist/server/index.js`.
+- **NEVER** change `webapp/package.json` `"start"` script to anything other than `node dist/server/index.js`.
+- **NEVER** add `tsx` as a production dependency. It belongs in `devDependencies` only and is permitted only in `dev`/`dev:server`/`db:seed` style scripts that exist for local development.
+- **Railway runs the `package.json` `start` script.** It must always be `node dist/server/index.js`. The `build` script is responsible for emitting the server JS to `dist/server/`. If you change one, audit the other.
