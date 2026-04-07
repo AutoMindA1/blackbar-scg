@@ -1,0 +1,43 @@
+name: BlackBar CI
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: webapp/package-lock.json
+
+      - name: Install dependencies
+        run: cd webapp && npm ci
+
+      - name: TypeScript compile check
+        run: cd webapp && npx tsc --noEmit
+
+      - name: Build
+        run: cd webapp && npm run build
+
+      - name: Verify no tsx in start script
+        run: |
+          START=$(node -e "console.log(require('./webapp/package.json').scripts.start)")
+          if echo "$START" | grep -q "tsx"; then
+            echo "::error::package.json start script contains tsx — production will crash"
+            exit 1
+          fi
+
+      - name: Verify start command matches railway.toml
+        run: |
+          if ! grep -q "node dist/server/index.js" railway.toml; then
+            echo "::error::railway.toml startCommand does not use compiled JS"
+            exit 1
+          fi

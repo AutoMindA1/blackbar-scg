@@ -1,3 +1,8 @@
+# BlackBar Railway Configuration
+# Production: main branch → blackbar-scg-production.up.railway.app
+# Staging: staging branch → configured separately in Railway dashboard
+# Both services use identical build/deploy commands
+
 [build]
 buildCommand = "cd webapp && npm install && npm run build"
 
