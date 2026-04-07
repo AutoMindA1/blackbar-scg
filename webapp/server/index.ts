@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import caseRoutes from './routes/cases.js';
@@ -57,10 +58,30 @@ app.use('/api/cases', reportRoutes);     // GET /:id/report, PUT /:id/report, PO
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// Serve Vite build in production
-const distPath = path.join(__dirname, '..', 'dist');
-app.use(express.static(distPath));
-app.get('/{*splat}', (_req, res) => res.sendFile(path.join(distPath, 'index.html')));
+// Serve Vite build in production.
+// Layout when running compiled (Railway):
+//   webapp/dist/server/index.js   ← this file at runtime
+//   webapp/dist/client/index.html ← Vite frontend build
+// In dev (`tsx server/index.ts`) the dist/client folder doesn't exist —
+// the Vite dev server on :5173 handles the frontend instead, so we skip
+// the static + catch-all registration entirely when the build isn't present.
+const clientDist = path.join(__dirname, '..', 'client');
+const indexHtml = path.join(clientDist, 'index.html');
+
+if (fs.existsSync(indexHtml)) {
+  app.use(express.static(clientDist, {
+    index: false, // we serve index.html via the catch-all so client-side routes always resolve
+    maxAge: '1h',
+  }));
+
+  // SPA fallback — every non-API GET returns index.html so React Router
+  // can handle client-side routes like /dashboard, /cases/:id/intake, etc.
+  // Express 5 wildcard syntax: '/{*splat}' matches anything not already routed.
+  app.get('/{*splat}', (_req, res) => res.sendFile(indexHtml));
+  console.log(`[server] Serving client build from ${clientDist}`);
+} else {
+  console.warn(`[server] No client build found at ${clientDist} — running API-only (dev mode)`);
+}
 
 app.listen(PORT, () => {
   console.log(`BlackBar API running on http://localhost:${PORT}`);
