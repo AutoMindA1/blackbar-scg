@@ -9,6 +9,7 @@ import CaseResearch from './pages/CaseResearch';
 import CaseDrafting from './pages/CaseDrafting';
 import CaseQA from './pages/CaseQA';
 import CaseExport from './pages/CaseExport';
+import NotFound from './pages/NotFound';
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
@@ -27,7 +28,8 @@ export default function App() {
           <Route path="/cases/:id/qa" element={<CaseQA />} />
           <Route path="/cases/:id/export" element={<CaseExport />} />
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

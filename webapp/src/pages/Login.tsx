@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Loader2 } from 'lucide-react';
+import { Loader2, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import BearMark from '../components/shared/BearMark';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -25,7 +26,6 @@ export default function Login() {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: unknown) {
-      console.error(err);
       const status = (err as { status?: number }).status;
       if (err instanceof TypeError) {
         setError('Cannot reach server — check your connection');
@@ -40,69 +40,84 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-deep flex items-center justify-center relative overflow-hidden">
-      {/* Ambient glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent-primary/5 rounded-full blur-[120px]" />
-
-      <div className="glass rounded-2xl p-8 w-full max-w-sm relative z-10 glow-border">
-        {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Shield className="w-10 h-10 text-accent-primary" />
-          </div>
-          <h1 className="font-display text-4xl tracking-tight mb-1">
-            <span className="text-text-primary">Black</span>
-            <span className="text-accent-primary">Bar</span>
-          </h1>
-          <p className="font-display text-sm italic text-accent-primary">Savage Wins</p>
-          <p className="text-[10px] text-text-muted uppercase tracking-[0.2em] mt-1">Swainston Consulting Group</p>
-          <p className="text-xs text-text-secondary mt-3 leading-relaxed">
-            From case intake to courtroom-ready rebuttal.<br />
-            Four AI agents. One pipeline. Every citation traced.
+    <div className="min-h-screen flex bg-[var(--color-bg-primary)]">
+      {/* Left panel — Full bear hero (hidden on small screens) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <BearMark variant="hero" size="full" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg-primary)] via-transparent to-transparent" />
+        <div className="absolute bottom-12 left-12 right-12">
+          <p className="text-sm text-[var(--color-text-muted)] italic">
+            "Every report is a controlled demolition"
           </p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs text-text-muted mb-1.5 uppercase tracking-wider">Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
-              placeholder="you@swainston.com" required />
-          </div>
-          <div>
-            <label className="block text-xs text-text-muted mb-1.5 uppercase tracking-wider">Password</label>
-            <div className="relative">
-              <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-surface border border-border rounded-lg px-4 py-3 pr-10 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary transition-colors"
-                placeholder="Enter password" required />
-              <button type="button" onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors">
-                {showPassword ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                )}
-              </button>
+      {/* Right panel — Login form */}
+      <div className="flex-1 flex items-center justify-center p-8 relative">
+        {/* Bear watermark on mobile (hidden on large screens) */}
+        <div className="lg:hidden">
+          <BearMark variant="watermark" opacity={0.12} />
+        </div>
+
+        <div className="w-full max-w-sm relative z-10 page-enter">
+          {/* Brand */}
+          <div className="text-center mb-10">
+            <div className="flex items-center justify-center mb-4">
+              <BearMark variant="icon" size="lg" />
             </div>
+            <h1 className="font-display text-4xl font-semibold tracking-[0.06em] text-[var(--color-text-primary)] mb-1">
+              Black<span className="text-[var(--color-accent-primary)]">Bar</span>
+            </h1>
+            <p className="font-display text-sm italic text-[var(--color-accent-primary)]">Savage Wins</p>
           </div>
 
-          {error && <p className="text-error text-xs">{error}</p>}
+          {/* Form */}
+          <div className="glass-elevated rounded-2xl p-8">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1.5 uppercase tracking-wider">Email</label>
+                <input
+                  type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)] transition-colors"
+                  placeholder="you@swainston.com" required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1.5 uppercase tracking-wider">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl px-4 py-3 pr-10 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)] transition-colors"
+                    placeholder="Enter password" required
+                  />
+                  <button type="button" onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors text-xs">
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
 
-          <button type="submit" disabled={loading}
-            className="w-full bg-accent-primary hover:bg-accent-primary/90 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            Sign In
-          </button>
-        </form>
+              {error && (
+                <div className="px-3 py-2 rounded-lg bg-[var(--color-error)]/10 border border-[var(--color-error)]/20 page-enter">
+                  <p className="text-[var(--color-error)] text-xs">{error}</p>
+                </div>
+              )}
 
-        <p className="text-[10px] text-text-muted text-center mt-6">UAT Environment — 2 hardcoded users</p>
+              <button type="submit" disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-hover)] text-white font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Sign In
+                {!loading && <ArrowRight className="w-4 h-4" />}
+              </button>
+            </form>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center mt-8 space-y-2">
+            <p className="text-xs text-[var(--color-text-secondary)]">AI-Assisted Expert Report Drafting</p>
+            <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-[0.15em]">Swainston Consulting Group</p>
+          </div>
+        </div>
       </div>
     </div>
   );

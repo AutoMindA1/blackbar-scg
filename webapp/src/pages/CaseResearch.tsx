@@ -1,49 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Search, BookOpen, Shield, CheckCircle } from 'lucide-react';
+import { Scale } from 'lucide-react';
 import Header from '../components/layout/Header';
-import StageNav from '../components/shared/StageNav';
-import AgentActivityFeed from '../components/shared/AgentActivityFeed';
-import HumanCheckpoint from '../components/shared/HumanCheckpoint';
+import StageNavV2 from '../components/shared/StageNavV2';
+import AgentActivityFeedV2 from '../components/shared/AgentActivityFeedV2';
+import HumanCheckpointV2 from '../components/shared/HumanCheckpointV2';
+import ContextualActionButton from '../components/shared/ContextualActionButton';
+import SkeletonLoader from '../components/shared/SkeletonLoader';
+import FindingsGrid from '../components/shared/FindingsGrid';
+import ResearchSummary from '../components/shared/ResearchSummary';
+import type { Citation } from '../components/shared/CitationCard';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
 import { api } from '../lib/api';
-
-// Mock findings seeded from the Brain's attack patterns
-const MOCK_FINDINGS = [
-  {
-    id: 1,
-    claim: '"The floor surface was inherently dangerous and failed to meet NFSI standards."',
-    codeRef: 'ANSI A326.3 / NFSI B101.1 / B101.3',
-    reasoning: 'ATK-08: Instrumentation defense — BOT-3000E is the only device named in ANSI A326.3. Plaintiff Expert used no instrument. Brain §8 confirms multi-standard framework applies.',
-    source: 'Peterson Expert Report, p.8',
-    pattern: 'ATK-08',
-  },
-  {
-    id: 2,
-    claim: '"The defendant failed to maintain adequate slip resistance testing programs."',
-    codeRef: 'CXLT Registry — Excel Tribometers, LLC',
-    reasoning: 'ATK-01: Credential attack — Peterson CXLT certification EXPIRED per public registry. Cannot credibly opine on tribometer methodology without active certification. Brain §10.',
-    source: 'CXLT Registry, checked 15 March 2026',
-    pattern: 'ATK-01',
-  },
-  {
-    id: 3,
-    claim: '"Based on my review of the photographs and records, the surface was unsafe."',
-    codeRef: 'BLK-11: No site visit dismissal',
-    reasoning: 'ATK-07: Omission attack — Peterson never visited the subject property, never tested the floor, never examined footwear, never analyzed gait from video. Brain §6 omission sequence applies.',
-    source: 'Peterson Report — no site inspection documented',
-    pattern: 'ATK-07',
-  },
-  {
-    id: 4,
-    claim: '"The 1988 Uniform Building Code required compliant flooring surfaces."',
-    codeRef: '1988 UBC — Clark County adopted edition',
-    reasoning: 'ATK-02: Code edition-in-force — 1991 construction date → 1988 UBC applies per Clark County adoption. Plaintiff cited IBC 2021 which was not adopted at permit date. Brain §8 5-step methodology.',
-    source: 'Clark County Building Dept records',
-    pattern: 'ATK-02',
-  },
-];
 
 export default function CaseResearch() {
   const { id } = useParams<{ id: string }>();
@@ -53,14 +22,10 @@ export default function CaseResearch() {
   const [showCheckpoint, setShowCheckpoint] = useState(false);
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- checkpoint display is a UI response to agent completion
   useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
 
-  const handleRunResearch = async () => {
-    if (!id) return;
-    clearLogs();
-    await triggerAgent(id, 'research');
-  };
-
+  const handleRunResearch = async () => { if (!id) return; clearLogs(); await triggerAgent(id, 'research'); };
   const handleApprove = async () => {
     if (!id) return;
     const { nextStage } = await api.approve(id, 'research', 'approve');
@@ -68,88 +33,91 @@ export default function CaseResearch() {
     navigate(`/cases/${id}/${nextStage}`);
   };
 
+  const stageOrder = ['intake', 'research', 'drafting', 'qa', 'export'];
+  const currentIdx = stageOrder.indexOf(activeCase?.stage || 'research');
+  const completedStages = stageOrder.slice(0, currentIdx);
+
+  // Extract findings from live agent logs and shape them into Citation objects.
+  // The current Research agent emits free-form prose; we use a heuristic split:
+  // first sentence (often the opposing claim or context) → claim, rest → reasoning.
+  const citations: Citation[] = useMemo(() => logs
+    .filter((l) => l.type === 'finding')
+    .map((l, i) => {
+      const message = l.message;
+      const codeMatch = message.match(/((?:ANSI|ASTM|NFSI|IBC|UBC|ICC|IES)\s?[A-Z0-9.\-§]+(?:\s?§\s?[\d.]+)?)/);
+      const atkMatch = message.match(/ATK-\d+/i);
+      const sourceMatch = message.match(/(?:p(?:age)?\.?\s*\d+|Section\s*[\d.]+)/i);
+      const sentences = message.split(/(?<=[.!?])\s+/);
+      const claim = sentences.length > 1 ? sentences[0] : undefined;
+      const reasoning = sentences.length > 1 ? sentences.slice(1).join(' ') : message;
+      return {
+        id: `f-${i}`,
+        claim,
+        reference: codeMatch?.[0],
+        reasoning,
+        source: sourceMatch?.[0],
+        confidence: l.metadata?.confidence as number | undefined,
+        attackPattern: (l.metadata?.attackPattern as string | undefined) || atkMatch?.[0]?.toUpperCase(),
+      };
+    }), [logs]);
+
+  // Findings shape used by HumanCheckpoint (kept for revise/approve flow)
+  const findings = citations.map((c) => ({
+    id: c.id,
+    message: c.reasoning,
+    confidence: c.confidence,
+    attackPattern: c.attackPattern,
+  }));
+
   const { error } = useCaseStore();
-  if (error) return <div className="p-8 text-center"><p className="text-error text-sm mb-2">Failed to load case</p><p className="text-text-muted text-xs">{error}</p></div>;
-  if (!activeCase) return <div className="p-8 text-center text-text-muted">Loading...</div>;
+  if (error) return <div className="p-8 text-center"><p className="text-[var(--color-error)] text-sm mb-2">Failed to load case</p></div>;
+  if (!activeCase) return <div className="p-6"><SkeletonLoader type="card" count={3} /></div>;
 
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
 
   return (
-    <div>
-      <Header title={activeCase.name} subtitle="Research — Brain queries: §6 Attack Patterns, §8 Standards & Codes, §10 Known Adversary, §9 Instruments" />
-      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} agentRunning={status === 'running'} />
+    <div className="page-enter">
+      <Header title={activeCase.name} subtitle="Research — Attack patterns, codes, standards, adversary playbook" />
+      <StageNavV2
+        currentStage={(activeCase.stage || 'research') as 'intake' | 'research' | 'drafting' | 'qa' | 'export'}
+        completedStages={completedStages}
+        agentRunning={status === 'running'}
+        onNavigate={stageNavigate}
+      />
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Research summary + findings */}
-        <div className="col-span-2 space-y-4">
-          {/* Summary */}
-          <div className="glass rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-text-secondary flex items-center gap-2">
-                <Search className="w-4 h-4" /> Research Findings
-              </h3>
-              <div className="flex items-center gap-3 text-xs text-text-muted font-mono">
-                <span>{MOCK_FINDINGS.length} findings</span>
-                <span>12 citations</span>
-              </div>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        {/* Left — Findings + action */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Action header */}
+          <div className="glass rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-4">
-              <button onClick={handleRunResearch}
-                disabled={status === 'running'}
-                className="px-4 py-2 bg-accent-primary/20 text-accent-primary rounded-lg text-sm hover:bg-accent-primary/30 disabled:opacity-50 transition-colors">
-                {status === 'running' ? 'Running...' : 'Run Research Agent'}
-              </button>
-              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-warning/20 text-warning">Sample Data</span>
+              <Scale className="w-5 h-5" style={{ color: 'var(--color-accent-secondary)' }} />
+              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Research Findings</h3>
+              {citations.length > 0 && (
+                <span className="text-xs font-mono text-[var(--color-text-muted)]">{citations.length} findings</span>
+              )}
             </div>
+            <ContextualActionButton stage="research" status={status} onAction={handleRunResearch} />
           </div>
 
-          {/* Citation cards */}
-          <div className="grid grid-cols-2 gap-4">
-            {MOCK_FINDINGS.map((f) => (
-              <div key={f.id} className="glass rounded-xl p-5 space-y-3 glow-border">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent-primary/20 text-accent-primary">
-                    {f.pattern}
-                  </span>
-                  <BookOpen className="w-3.5 h-3.5 text-text-muted" />
-                </div>
-                <blockquote className="text-xs text-text-secondary italic border-l-2 border-accent-primary/30 pl-3">
-                  {f.claim}
-                </blockquote>
-                <div>
-                  <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Code / Standard</p>
-                  <p className="text-xs text-accent-secondary font-mono">{f.codeRef}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Agent Reasoning</p>
-                  <p className="text-xs text-text-primary leading-relaxed">{f.reasoning}</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Shield className="w-3 h-3 text-text-muted" />
-                  <span className="text-[10px] text-text-muted">{f.source}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <button onClick={() => setShowCheckpoint(true)}
-            className="w-full flex items-center justify-center gap-2 bg-success/20 text-success py-3 rounded-lg hover:bg-success/30 transition-colors font-medium">
-            <CheckCircle className="w-4 h-4" /> Approve Research
-          </button>
+          <FindingsGrid citations={citations} />
         </div>
 
-        {/* Right — Activity */}
-        <AgentActivityFeed logs={logs} />
+        {/* Right — Summary + Activity */}
+        <div className="space-y-4">
+          {citations.length > 0 && <ResearchSummary citations={citations} />}
+          <AgentActivityFeedV2 logs={logs} stage="research" status={status} />
+        </div>
       </div>
 
       {showCheckpoint && (
-        <HumanCheckpoint
+        <HumanCheckpointV2
           stage="research"
-          summary={`Research complete — ${MOCK_FINDINGS.length} attack patterns identified, 12 citations catalogued. Peterson CXLT expired. Omission attack at maximum strength.`}
+          summary={`Research complete — ${findings.length} attack patterns identified.`}
+          findings={findings}
           onApprove={handleApprove}
           onRevise={async (notes) => { clearLogs(); await triggerAgent(id!, 'research', notes); setShowCheckpoint(false); }}
           onReject={() => setShowCheckpoint(false)}
-          onClose={() => setShowCheckpoint(false)}
         />
       )}
     </div>

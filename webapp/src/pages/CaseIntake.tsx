@@ -1,10 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, FileText, Play, Loader2 } from 'lucide-react';
 import Header from '../components/layout/Header';
-import StageNav from '../components/shared/StageNav';
-import AgentActivityFeed from '../components/shared/AgentActivityFeed';
-import HumanCheckpoint from '../components/shared/HumanCheckpoint';
+import StageNavV2 from '../components/shared/StageNavV2';
+import AgentActivityFeedV2 from '../components/shared/AgentActivityFeedV2';
+import HumanCheckpointV2 from '../components/shared/HumanCheckpointV2';
+import ContextualActionButton from '../components/shared/ContextualActionButton';
+import SkeletonLoader from '../components/shared/SkeletonLoader';
+import FileDropzone from '../components/shared/FileDropzone';
+import CaseForm from '../components/shared/CaseForm';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
 import { api } from '../lib/api';
@@ -16,24 +19,24 @@ export default function CaseIntake() {
   const { logs, status, connectSSE, disconnectSSE, triggerAgent, clearLogs } = useAgentStore();
   const [uploading, setUploading] = useState(false);
   const [showCheckpoint, setShowCheckpoint] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
   useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
 
-  const handleFiles = useCallback(async (files: FileList | File[]) => {
+  const handleFiles = useCallback(async (files: File[]) => {
     if (!id) return;
     setUploading(true);
     try {
-      await api.uploadDocuments(id, Array.from(files));
+      await api.uploadDocuments(id, files);
       await fetchCase(id);
     } finally { setUploading(false); }
   }, [id, fetchCase]);
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDragOver(false);
-    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
-  };
+  const handleSaveDetails = useCallback(async (values: Record<string, unknown>) => {
+    if (!id) return;
+    await api.updateCase(id, values);
+    await fetchCase(id);
+  }, [id, fetchCase]);
 
   const handleStartAnalysis = async () => {
     if (!id) return;
@@ -58,90 +61,97 @@ export default function CaseIntake() {
 
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
 
+  // Derive completed stages from current stage
+  const stageOrder = ['intake', 'research', 'drafting', 'qa', 'export'];
+  const currentIdx = stageOrder.indexOf(activeCase?.stage || 'intake');
+  const completedStages = stageOrder.slice(0, currentIdx);
+
+  // Build findings for checkpoint from logs
+  const findings = logs
+    .filter(l => l.type === 'finding')
+    .map((l, i) => ({
+      id: `f-${i}`,
+      message: l.message,
+      confidence: l.metadata?.confidence as number | undefined,
+      attackPattern: l.metadata?.attackPattern as string | undefined,
+    }));
+
   const { error } = useCaseStore();
-  if (error) return <div className="p-8 text-center"><p className="text-error text-sm mb-2">Failed to load case</p><p className="text-text-muted text-xs">{error}</p></div>;
-  if (!activeCase) return <div className="p-8 text-center text-text-muted">Loading case...</div>;
+  if (error) return (
+    <div className="p-8 text-center">
+      <p className="text-[var(--color-error)] text-sm mb-2">Failed to load case</p>
+      <p className="text-[var(--color-text-muted)] text-xs">{error}</p>
+    </div>
+  );
+
+  if (!activeCase) return <div className="p-6"><SkeletonLoader type="card" count={3} /></div>;
 
   return (
-    <div>
-      <Header title={activeCase.name} subtitle={`${activeCase.reportType || 'Initial'} Report — ${activeCase.jurisdiction || 'Clark County'}`} />
-      <StageNav currentStage={activeCase.stage} onNavigate={stageNavigate} agentRunning={status === 'running'} />
+    <div className="page-enter">
+      <Header
+        title={activeCase.name}
+        subtitle={`${activeCase.reportType || 'Initial'} Report \u2014 ${activeCase.jurisdiction || 'Clark County'}`}
+      />
+      <StageNavV2
+        currentStage={(activeCase.stage || 'intake') as 'intake' | 'research' | 'drafting' | 'qa' | 'export'}
+        completedStages={completedStages}
+        agentRunning={status === 'running'}
+        onNavigate={stageNavigate}
+      />
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Left — Case Metadata */}
-        <div className="glass rounded-xl p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-text-secondary">Case Details</h3>
-          {[
-            { label: 'Case Type (Brain §3)', value: activeCase.caseType?.replace('_', ' & ') || '—' },
-            { label: 'Report Type (Brain §4)', value: activeCase.reportType || '—' },
-            { label: 'Jurisdiction', value: activeCase.jurisdiction || '—' },
-            { label: 'Opposing Expert', value: activeCase.opposingExpert || '—' },
-            { label: 'Deadline', value: activeCase.deadline ? new Date(activeCase.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '—' },
-          ].map((item) => (
-            <div key={item.label}>
-              <p className="text-[10px] text-text-muted uppercase tracking-wider">{item.label}</p>
-              <p className="text-sm text-text-primary mt-0.5">{item.value}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Center — Upload Zone */}
-        <div className="space-y-4">
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            className={`glass rounded-xl p-8 text-center cursor-pointer transition-all ${dragOver ? 'border-accent-primary bg-accent-glow' : ''}`}
-            onClick={() => document.getElementById('file-input')?.click()}
-          >
-            <input id="file-input" type="file" multiple accept=".pdf,.docx,.doc" className="hidden"
-              onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); }} />
-            <Upload className={`w-8 h-8 mx-auto mb-3 ${dragOver ? 'text-accent-primary' : 'text-text-muted'}`} />
-            <p className="text-sm text-text-secondary">Drop PDF/DOCX files here or click to browse</p>
-            {uploading && <Loader2 className="w-5 h-5 mx-auto mt-3 text-accent-primary animate-spin" />}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        {/* Left — Upload + Action (Steps 1 & 2) */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Step 1: Upload */}
+          <div className="glass rounded-2xl p-6">
+            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Step 1: Upload Documents</h3>
+            <FileDropzone
+              documents={activeCase.documents}
+              uploading={uploading}
+              onFiles={handleFiles}
+              hint="Expert reports, depositions, photos · PDF page counts auto-extracted"
+            />
           </div>
 
-          {/* File list */}
-          {activeCase.documents.length > 0 && (
-            <div className="glass rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-text-secondary mb-3">Uploaded Documents</h3>
-              <div className="space-y-2">
-                {activeCase.documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between py-2 px-3 bg-surface rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-accent-secondary" />
-                      <span className="text-xs text-text-primary">{doc.filename}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-[10px] text-text-muted font-mono">
-                      <span>{doc.pageCount || '?'} pages</span>
-                      <span>{doc.sizeBytes ? `${(doc.sizeBytes / 1024).toFixed(0)}KB` : ''}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <button onClick={handleStartAnalysis}
-            disabled={activeCase.documents.length === 0 || status === 'running'}
-            className="w-full flex items-center justify-center gap-2 bg-accent-primary hover:bg-accent-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors">
-            {status === 'running' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Start Analysis
-          </button>
+          {/* Step 2: Run Analysis */}
+          <div className="glass rounded-2xl p-6">
+            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Step 2: Run Analysis</h3>
+            <ContextualActionButton
+              stage="intake"
+              status={status}
+              onAction={handleStartAnalysis}
+              disabled={activeCase.documents.length === 0}
+            />
+          </div>
         </div>
 
-        {/* Right — Activity Feed */}
-        <AgentActivityFeed logs={logs} />
+        {/* Right — Details + Activity */}
+        <div className="space-y-4">
+          <CaseForm
+            initial={{
+              caseType: activeCase.caseType,
+              reportType: activeCase.reportType,
+              jurisdiction: activeCase.jurisdiction,
+              opposingExpert: activeCase.opposingExpert,
+              deadline: activeCase.deadline,
+            }}
+            onSave={handleSaveDetails}
+          />
+
+          {/* Agent Activity */}
+          <AgentActivityFeedV2 logs={logs} stage="intake" status={status} />
+        </div>
       </div>
 
+      {/* Human Checkpoint */}
       {showCheckpoint && (
-        <HumanCheckpoint
+        <HumanCheckpointV2
           stage="intake"
           summary="Intake analysis complete — case classified, jurisdiction confirmed, opposing expert flagged."
+          findings={findings}
           onApprove={handleApprove}
           onRevise={handleRevise}
           onReject={() => setShowCheckpoint(false)}
-          onClose={() => setShowCheckpoint(false)}
         />
       )}
     </div>

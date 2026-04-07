@@ -269,3 +269,69 @@ If the draft is clean:
    Draft is at: /BLACK-BAR/cases/[Case-ID]/draft.md
    QA Report is at: /BLACK-BAR/cases/[Case-ID]/qa-report.md
 ```
+
+---
+
+## OUTPUT CONTRACT — MACHINE-READABLE SCORECARD (REQUIRED)
+
+**The webapp consumes a structured JSON scorecard.** Your prose QA Report above is for Lane and Mariz to read. The JSON block below is for the BlackBar webapp to parse and render in the QA dashboard. **Both must be produced.**
+
+After your prose QA Report, you MUST end your response with a single fenced JSON code block matching this exact schema. No commentary after the JSON. No additional text. No explanation.
+
+```json
+{
+  "score": 94,
+  "benchmarkMatch": 92,
+  "checks": [
+    { "name": "Structure Compliance", "status": "pass", "detail": "All section headers underlined and in correct order per VOICE.md §5." },
+    { "name": "Identity & Attribution", "status": "pass", "detail": "Entity voice consistent — no unauthorized first person in body text." },
+    { "name": "Alleged Language", "status": "warning", "detail": "Line 47: 'when she fell' missing 'allegedly' qualifier." },
+    { "name": "Date Format", "status": "pass", "detail": "All dates in European format (DD Month YYYY)." },
+    { "name": "Boilerplate Block Integrity", "status": "pass", "detail": "All Research-selected blocks present verbatim." },
+    { "name": "Conclusion Boilerplate", "status": "pass", "detail": "Current 2025-2026 closing paragraph + sign-off block present with TCDS." },
+    { "name": "Documentation List", "status": "pass", "detail": "Semicolons between items, period on final, all dates European." },
+    { "name": "Open Placeholders", "status": "warning", "detail": "2 [[PLACEHOLDER:...]] tokens remain — see prose report." },
+    { "name": "Benchmark Comparison", "status": "pass", "detail": "Reads like Anderson — institutional voice, citation-anchored." },
+    { "name": "Fact Accuracy", "status": "pass", "detail": "Incident date, venue, attorney, and codes all match Intake/Research." }
+  ],
+  "issues": [
+    {
+      "severity": "critical",
+      "description": "Conclusion paragraph missing 'venue operations' phrase — older boilerplate version was used.",
+      "location": "Section 7 — Conclusion, paragraph 1"
+    },
+    {
+      "severity": "warning",
+      "description": "Line 47: 'when she fell' missing 'allegedly' qualifier per VOICE.md §11.",
+      "location": "Section 4 — Alleged Accident Details, paragraph 2"
+    },
+    {
+      "severity": "info",
+      "description": "Open placeholder for code edition lookup pending Lane confirmation.",
+      "location": "Section 6 — Points of Opinion, opinion 3"
+    }
+  ]
+}
+```
+
+### Field rules
+
+- **`score`** — integer 0–100. Compute as: (passing checks ÷ total checks × 100), rounded. A check with `status: "warning"` counts as 0.5; `pass` counts as 1; `fail` counts as 0. Round the final number.
+- **`benchmarkMatch`** — integer 0–100. Your score from CHECK 9 — how closely the draft matches Gleason / Heagy / Anderson. Average across all sections you scored.
+- **`checks`** — exactly the 10 checks from the AUDIT PROTOCOL above, in order. Each entry has:
+  - `name` — short check title (use the names above for consistency with the UI)
+  - `status` — `"pass"` | `"warning"` | `"fail"`
+  - `detail` — one-sentence summary; if findings exist, lead with the most important one
+- **`issues`** — every blocking or review-worthy finding. Order by severity (critical → warning → info). Each entry has:
+  - `severity` — `"critical"` (blocking — Lane must fix before filing) | `"warning"` (Lane should review) | `"info"` (FYI)
+  - `description` — the specific finding with quoted draft text where helpful
+  - `location` — section name + paragraph or line reference
+
+### Hard rules for the JSON block
+
+1. **The JSON block is the LAST thing in your response.** Nothing after it. The webapp parses the trailing fenced JSON.
+2. **It must be valid JSON.** No trailing commas. No comments. No JavaScript-style values. Test mentally before emitting.
+3. **All 10 checks must appear**, even if their status is `pass` and detail is `"None."`.
+4. **If you cannot complete the QA (missing inputs, draft empty, etc.):** Still emit the JSON block with `score: 0`, all checks set to `status: "fail"` with a `detail` explaining what's missing, and an `issues` entry of severity `critical` describing the blocker.
+5. **Do not invent issues to pad the report.** If the draft is clean, `issues` is `[]`.
+6. **The fenced block must use ` ```json ` opening and ` ``` ` closing** — the parser keys on this fence.

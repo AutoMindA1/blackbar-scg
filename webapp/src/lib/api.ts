@@ -52,18 +52,37 @@ export const api = {
       method: 'POST', body: JSON.stringify({ stage, action, notes }),
     }),
 
+  // QA
+  getQAScorecard: (caseId: string) =>
+    request<{ qa: QAScorecard | null; ranAt: string | null }>(`/cases/${caseId}/qa`),
+
   // Reports
   getReport: (caseId: string) => request<{ content: string; sections: Section[]; version: number }>(`/cases/${caseId}/report`),
   saveReport: (caseId: string, content: string) =>
     request<{ saved: boolean }>(`/cases/${caseId}/report`, { method: 'PUT', body: JSON.stringify({ content }) }),
-  exportReport: (caseId: string, format: string) =>
-    request<Blob>(`/cases/${caseId}/export`, { method: 'POST', body: JSON.stringify({ format }) }),
+  // Binary export — bypasses the JSON request helper. Returns a Blob the caller can download.
+  exportReport: async (caseId: string, format: 'pdf' | 'docx'): Promise<Blob> => {
+    const token = localStorage.getItem('bb_token');
+    const res = await fetch(`${API_BASE}/cases/${caseId}/export`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ format }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(body.error || `Export failed (${res.status})`);
+    }
+    return res.blob();
+  },
 };
 
 export function createSSE(caseId: string, onMessage: (data: SSEMessage) => void): EventSource {
   const token = localStorage.getItem('bb_token');
   const es = new EventSource(`${API_BASE}/cases/${caseId}/agents/stream?token=${token}`);
-  es.onmessage = (e) => { try { onMessage(JSON.parse(e.data)); } catch {} };
+  es.onmessage = (e) => { try { onMessage(JSON.parse(e.data)); } catch { /* ignore malformed SSE data */ } };
   return es;
 }
 
@@ -92,6 +111,14 @@ export interface AgentLog {
 export interface ReportData { content: string | null; sections: Section[] | null; version: number; }
 export interface Section { title: string; order: number; }
 export interface SSEMessage { type: string; message: string; timestamp?: string; metadata?: Record<string, unknown>; stage?: string; }
+
+// QA scorecard schema — emitted by the QA agent (agents/qa/BlackBar-QA.md OUTPUT CONTRACT)
+export interface QAScorecard {
+  score: number;
+  benchmarkMatch?: number;
+  checks: { name: string; status: 'pass' | 'warning' | 'fail'; detail: string }[];
+  issues: { severity: 'critical' | 'warning' | 'info'; description: string; location: string }[];
+}
 
 export interface CreateCasePayload {
   name: string; caseType?: string; reportType?: string;

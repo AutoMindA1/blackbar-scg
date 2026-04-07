@@ -28,9 +28,22 @@ app.use(helmet({
   },
 }));
 
+// CORS — require explicit origins in production, block localhost
+if (!process.env.ALLOWED_ORIGINS && process.env.NODE_ENV === 'production') {
+  throw new Error('ALLOWED_ORIGINS must be set in production');
+}
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : ['http://localhost:5173', 'http://localhost:5174'];
+if (process.env.NODE_ENV === 'production') {
+  const hasLocalhost = allowedOrigins.some(o => o.includes('localhost'));
+  if (hasLocalhost) {
+    console.warn('[security] ALLOWED_ORIGINS contains localhost in production — removing');
+    const filtered = allowedOrigins.filter(o => !o.includes('localhost'));
+    allowedOrigins.length = 0;
+    allowedOrigins.push(...filtered);
+  }
+}
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));

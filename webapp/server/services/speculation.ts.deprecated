@@ -1,0 +1,338 @@
+/**
+ * BlackBar Speculative Execution Engine
+ *
+ * After each agent stage completes, predict the next stage's output
+ * and fork a background execution before the human approves.
+ *
+ * When the human approves → promote speculative result (instant stage transition)
+ * When the human revises  → discard speculative result, re-run with feedback
+ * When the human rejects  → discard speculative result, halt pipeline
+ *
+ * Results live in a "speculation overlay" (DB rows marked speculative=true)
+ * that never surface to the user until promoted.
+ *
+ * Architecture mirrors branch prediction in CPUs:
+ * - Predict the likely path (approve → next stage)
+ * - Execute speculatively along that path
+ * - Commit if prediction was correct, flush if wrong
+ */
+
+import { prisma } from '../db.js';
+import { runAgent, type AgentResult } from './agentRunner.js';
+import { validateWithAdvisor } from './advisor.js';
+import { recordSpeculation, recordOutcome } from './pipelineMetrics.js';
+
+// ─── Types ───────────────────────────────────────────────────────
+
+export interface SpeculativeJob {
+  id: string;
+  caseId: string;
+  fromStage: string;           // stage that just completed
+  speculativeStage: string;    // stage being speculatively executed
+  status: 'pending' | 'running' | 'complete' | 'validated' | 'discarded';
+  model: string;               // model used for speculation (fast by default)
+  advisorModel?: string;       // model used for validation (smart)
+  result?: AgentResult;
+  advisorScore?: number;       // 0-100 confidence from advisor
+  startedAt: Date;
+  completedAt?: Date;
+  discardedAt?: Date;
+  discardReason?: 'revised' | 'rejected' | 'timeout' | 'advisor_rejected' | 'prediction_wrong';
+}
+
+// In-memory speculation registry (per-case, at most 1 active speculation)
+const activeSpeculations = new Map<string, SpeculativeJob>();
+
+// Pipeline stage order — speculation always predicts "approve → next stage"
+const STAGE_ORDER = ['intake', 'research', 'drafting', 'qa', 'export'] as const;
+
+// ─── Configuration ───────────────────────────────────────────────
+
+const SPECULATION_CONFIG = {
+  enabled: process.env.SPECULATION_ENABLED === 'true',
+
+  // Model selection: speculate with fast model, validate with smart model
+  speculationModel: process.env.SPECULATION_MODEL || 'claude-sonnet-4-6',
+  advisorModel: process.env.ADVISOR_MODEL || 'claude-opus-4-6',
+
+  // Only speculate if prior acceptance rate for this stage exceeds threshold
+  minAcceptanceRate: parseFloat(process.env.SPECULATION_MIN_ACCEPTANCE || '0.7'),
+
+  // Timeout: discard speculation if human hasn't acted in N minutes
+  timeoutMinutes: parseInt(process.env.SPECULATION_TIMEOUT_MINUTES || '30', 10),
+
+  // Advisor gate: only promote speculation if advisor score >= threshold
+  advisorThreshold: parseInt(process.env.ADVISOR_THRESHOLD || '80', 10),
+
+  // Boundary detection: stages where speculation pauses
+  // (e.g., drafting → qa involves Lane reviewing actual prose — higher revision rate)
+  pauseBeforeStages: (process.env.SPECULATION_PAUSE_STAGES || '').split(',').filter(Boolean),
+
+  // Max speculation depth: how many stages ahead to speculate
+  maxDepth: parseInt(process.env.SPECULATION_MAX_DEPTH || '2', 10),
+};
+
+// ─── Core Functions ──────────────────────────────────────────────
+
+/**
+ * Called when an agent stage completes successfully.
+ * Decides whether to speculatively execute the next stage.
+ */
+export async function maybeSpeculate(caseId: string, completedStage: string): Promise<void> {
+  if (!SPECULATION_CONFIG.enabled) return;
+
+  const nextStage = getNextStage(completedStage);
+  if (!nextStage) return; // at export, nothing to speculate
+
+  // Boundary check: don't speculate into paused stages
+  if (SPECULATION_CONFIG.pauseBeforeStages.includes(nextStage)) {
+    console.log(`[Speculation] Paused before ${nextStage} (boundary stage)`);
+    return;
+  }
+
+  // Check historical acceptance rate for this transition
+  const acceptanceRate = await getAcceptanceRate(completedStage);
+  if (acceptanceRate < SPECULATION_CONFIG.minAcceptanceRate) {
+    console.log(`[Speculation] Skipped ${completedStage} → ${nextStage}: acceptance rate ${(acceptanceRate * 100).toFixed(0)}% < ${(SPECULATION_CONFIG.minAcceptanceRate * 100).toFixed(0)}% threshold`);
+    return;
+  }
+
+  // Don't double-speculate: if there's already an active speculation for this case, skip
+  if (activeSpeculations.has(caseId)) {
+    console.log(`[Speculation] Skipped: active speculation already exists for case ${caseId}`);
+    return;
+  }
+
+  // Fork speculative execution
+  const job: SpeculativeJob = {
+    id: `spec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    caseId,
+    fromStage: completedStage,
+    speculativeStage: nextStage,
+    status: 'pending',
+    model: SPECULATION_CONFIG.speculationModel,
+    advisorModel: SPECULATION_CONFIG.advisorModel,
+    startedAt: new Date(),
+  };
+
+  activeSpeculations.set(caseId, job);
+  recordSpeculation(job);
+
+  console.log(`[Speculation] Starting: ${completedStage} → ${nextStage} for case ${caseId} (model: ${job.model})`);
+
+  // Execute in background — don't await, don't block the response
+  executeSpeculation(job).catch((err) => {
+    console.error(`[Speculation] Failed for case ${caseId}:`, err);
+    job.status = 'discarded';
+    job.discardReason = 'prediction_wrong';
+    job.discardedAt = new Date();
+    activeSpeculations.delete(caseId);
+    recordOutcome(job, 'error');
+  });
+}
+
+/**
+ * Background execution of speculative agent run.
+ * Runs the next-stage agent with the fast model, then validates with advisor.
+ */
+async function executeSpeculation(job: SpeculativeJob): Promise<void> {
+  job.status = 'running';
+
+  try {
+    // Run agent with speculation model (fast, cheap)
+    const result = await runAgent(job.caseId, job.speculativeStage, {
+      model: job.model,
+      speculative: true,  // flag so agent doesn't broadcast SSE or update case stage
+      suppressSideEffects: true,
+    });
+
+    job.result = result;
+    job.status = 'complete';
+    job.completedAt = new Date();
+
+    console.log(`[Speculation] Complete: ${job.speculativeStage} for case ${job.caseId} (${elapsed(job)}ms)`);
+
+    // Validate with advisor model if configured
+    if (SPECULATION_CONFIG.advisorModel) {
+      const advisorResult = await validateWithAdvisor(
+        job.caseId,
+        job.speculativeStage,
+        result,
+        SPECULATION_CONFIG.advisorModel,
+      );
+
+      job.advisorScore = advisorResult.score;
+
+      if (advisorResult.score >= SPECULATION_CONFIG.advisorThreshold) {
+        job.status = 'validated';
+        console.log(`[Speculation] Validated by advisor: score ${advisorResult.score}/100 for ${job.speculativeStage}`);
+      } else {
+        job.status = 'discarded';
+        job.discardReason = 'advisor_rejected';
+        job.discardedAt = new Date();
+        activeSpeculations.delete(job.caseId);
+        console.log(`[Speculation] Advisor rejected: score ${advisorResult.score}/100 < ${SPECULATION_CONFIG.advisorThreshold} threshold`);
+        recordOutcome(job, 'advisor_rejected');
+      }
+    } else {
+      job.status = 'validated'; // no advisor = auto-validate
+    }
+
+    // Set timeout to discard if human doesn't act
+    setTimeout(() => {
+      if (activeSpeculations.get(job.caseId)?.id === job.id && job.status !== 'discarded') {
+        job.status = 'discarded';
+        job.discardReason = 'timeout';
+        job.discardedAt = new Date();
+        activeSpeculations.delete(job.caseId);
+        console.log(`[Speculation] Timed out: ${job.speculativeStage} for case ${job.caseId}`);
+        recordOutcome(job, 'timeout');
+      }
+    }, SPECULATION_CONFIG.timeoutMinutes * 60 * 1000);
+
+  } catch (err) {
+    job.status = 'discarded';
+    job.discardReason = 'prediction_wrong';
+    job.discardedAt = new Date();
+    activeSpeculations.delete(job.caseId);
+    throw err;
+  }
+}
+
+/**
+ * Called when the human acts on a checkpoint.
+ * Returns the speculative result if it can be promoted, or null.
+ */
+export async function resolveSpeculation(
+  caseId: string,
+  stage: string,
+  action: 'approve' | 'revise' | 'reject',
+): Promise<{ promoted: boolean; result?: AgentResult; timeSaved?: number }> {
+
+  const job = activeSpeculations.get(caseId);
+
+  if (!job || job.fromStage !== stage) {
+    // No active speculation for this stage transition
+    return { promoted: false };
+  }
+
+  if (action === 'approve') {
+    if (job.status === 'validated' || job.status === 'complete') {
+      // PROMOTE: prediction was correct, use speculative result
+      const timeSaved = elapsed(job);
+      activeSpeculations.delete(caseId);
+
+      console.log(`[Speculation] PROMOTED: ${job.speculativeStage} for case ${caseId} — saved ${timeSaved}ms`);
+      recordOutcome(job, 'promoted');
+
+      // Chain: speculatively execute the stage AFTER the one we just promoted
+      // This is the "predict, execute, predict, execute" loop
+      maybeSpeculate(caseId, job.speculativeStage);
+
+      return {
+        promoted: true,
+        result: job.result,
+        timeSaved,
+      };
+    } else if (job.status === 'running') {
+      // Speculation still in progress — can't promote yet, but mark for promotion
+      // The human approved faster than the speculation completed
+      // Let the normal flow proceed; speculation will complete and be discarded
+      console.log(`[Speculation] Approved but still running — falling through to normal execution`);
+      job.status = 'discarded';
+      job.discardReason = 'prediction_wrong'; // technically correct prediction, bad timing
+      job.discardedAt = new Date();
+      activeSpeculations.delete(caseId);
+      recordOutcome(job, 'too_slow');
+      return { promoted: false };
+    }
+  }
+
+  // DISCARD: human revised or rejected — speculation was wrong
+  job.status = 'discarded';
+  job.discardReason = action === 'revise' ? 'revised' : 'rejected';
+  job.discardedAt = new Date();
+  activeSpeculations.delete(caseId);
+
+  console.log(`[Speculation] DISCARDED: ${job.speculativeStage} for case ${caseId} — reason: ${action}`);
+  recordOutcome(job, action);
+
+  return { promoted: false };
+}
+
+/**
+ * Get the current speculation state for a case (used by frontend to show pre-staged indicator)
+ */
+export function getSpeculationStatus(caseId: string): {
+  active: boolean;
+  stage?: string;
+  status?: string;
+  model?: string;
+  advisorScore?: number;
+} {
+  const job = activeSpeculations.get(caseId);
+  if (!job) return { active: false };
+  return {
+    active: true,
+    stage: job.speculativeStage,
+    status: job.status,
+    model: job.model,
+    advisorScore: job.advisorScore,
+  };
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────
+
+function getNextStage(stage: string): string | null {
+  const idx = STAGE_ORDER.indexOf(stage as typeof STAGE_ORDER[number]);
+  if (idx === -1 || idx >= STAGE_ORDER.length - 1) return null;
+  return STAGE_ORDER[idx + 1];
+}
+
+function elapsed(job: SpeculativeJob): number {
+  const end = job.completedAt || job.discardedAt || new Date();
+  return end.getTime() - job.startedAt.getTime();
+}
+
+async function getAcceptanceRate(stage: string): Promise<number> {
+  // Query historical approve/revise/reject ratios for this stage
+  const total = await prisma.agentLog.count({
+    where: {
+      stage,
+      type: 'complete',
+      message: { contains: 'approved' },
+    },
+  });
+
+  const approved = await prisma.agentLog.count({
+    where: {
+      stage,
+      type: 'complete',
+      message: { contains: 'approved by user' },
+    },
+  });
+
+  if (total === 0) return 1.0; // no history = assume approve (optimistic)
+  return approved / total;
+}
+
+// ─── Cleanup ─────────────────────────────────────────────────────
+
+/**
+ * Periodic cleanup of stale speculations (called from server startup)
+ */
+export function startSpeculationCleanup(): void {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [caseId, job] of activeSpeculations.entries()) {
+      const age = now - job.startedAt.getTime();
+      if (age > SPECULATION_CONFIG.timeoutMinutes * 60 * 1000) {
+        job.status = 'discarded';
+        job.discardReason = 'timeout';
+        job.discardedAt = new Date();
+        activeSpeculations.delete(caseId);
+        recordOutcome(job, 'timeout');
+      }
+    }
+  }, 60_000); // check every minute
+}
