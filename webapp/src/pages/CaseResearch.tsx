@@ -12,7 +12,7 @@ import ResearchSummary from '../components/shared/ResearchSummary';
 import type { Citation } from '../components/shared/CitationCard';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
-import { api } from '../lib/api';
+import { api, parseResearchFromMetadata } from '../lib/api';
 
 export default function CaseResearch() {
   const { id } = useParams<{ id: string }>();
@@ -37,29 +37,43 @@ export default function CaseResearch() {
   const currentIdx = stageOrder.indexOf(activeCase?.stage || 'research');
   const completedStages = stageOrder.slice(0, currentIdx);
 
-  // Extract findings from live agent logs and shape them into Citation objects.
-  // The current Research agent emits free-form prose; we use a heuristic split:
-  // first sentence (often the opposing claim or context) → claim, rest → reasoning.
-  const citations: Citation[] = useMemo(() => logs
-    .filter((l) => l.type === 'finding')
-    .map((l, i) => {
-      const message = l.message;
-      const codeMatch = message.match(/((?:ANSI|ASTM|NFSI|IBC|UBC|ICC|IES)\s?[A-Z0-9.\-§]+(?:\s?§\s?[\d.]+)?)/);
-      const atkMatch = message.match(/ATK-\d+/i);
-      const sourceMatch = message.match(/(?:p(?:age)?\.?\s*\d+|Section\s*[\d.]+)/i);
-      const sentences = message.split(/(?<=[.!?])\s+/);
-      const claim = sentences.length > 1 ? sentences[0] : undefined;
-      const reasoning = sentences.length > 1 ? sentences.slice(1).join(' ') : message;
-      return {
-        id: `f-${i}`,
-        claim,
-        reference: codeMatch?.[0],
-        reasoning,
-        source: sourceMatch?.[0],
-        confidence: l.metadata?.confidence as number | undefined,
-        attackPattern: (l.metadata?.attackPattern as string | undefined) || atkMatch?.[0]?.toUpperCase(),
-      };
-    }), [logs]);
+  // Prefer the typed ResearchResult emitted by the Research agent's structured
+  // JSON contract. Fall back to a heuristic prose-parser over `finding` events
+  // for older runs / partial data.
+  const citations: Citation[] = useMemo(() => {
+    const completeLog = [...logs].reverse().find((l) => l.type === 'complete');
+    const typed = parseResearchFromMetadata(completeLog?.metadata);
+    if (typed && typed.findings.length > 0) {
+      return typed.findings.map((f) => ({
+        id: f.id,
+        claim: f.opposingClaim,
+        reference: f.codeReference,
+        reasoning: f.reasoning,
+        source: f.sourceDocument ? `${f.sourceDocument}${f.sourcePage ? ` p.${f.sourcePage}` : ''}` : undefined,
+        attackPattern: f.attackPattern,
+      }));
+    }
+    return logs
+      .filter((l) => l.type === 'finding')
+      .map((l, i) => {
+        const message = l.message;
+        const codeMatch = message.match(/((?:ANSI|ASTM|NFSI|IBC|UBC|ICC|IES)\s?[A-Z0-9.\-§]+(?:\s?§\s?[\d.]+)?)/);
+        const atkMatch = message.match(/ATK-\d+/i);
+        const sourceMatch = message.match(/(?:p(?:age)?\.?\s*\d+|Section\s*[\d.]+)/i);
+        const sentences = message.split(/(?<=[.!?])\s+/);
+        const claim = sentences.length > 1 ? sentences[0] : undefined;
+        const reasoning = sentences.length > 1 ? sentences.slice(1).join(' ') : message;
+        return {
+          id: `f-${i}`,
+          claim,
+          reference: codeMatch?.[0],
+          reasoning,
+          source: sourceMatch?.[0],
+          confidence: l.metadata?.confidence as number | undefined,
+          attackPattern: (l.metadata?.attackPattern as string | undefined) || atkMatch?.[0]?.toUpperCase(),
+        };
+      });
+  }, [logs]);
 
   // Findings shape used by HumanCheckpoint (kept for revise/approve flow)
   const findings = citations.map((c) => ({

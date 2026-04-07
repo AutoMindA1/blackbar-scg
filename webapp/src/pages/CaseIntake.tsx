@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import StageNavV2 from '../components/shared/StageNavV2';
@@ -10,7 +10,7 @@ import FileDropzone from '../components/shared/FileDropzone';
 import CaseForm from '../components/shared/CaseForm';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
-import { api } from '../lib/api';
+import { api, parseIntakeFromMetadata } from '../lib/api';
 
 export default function CaseIntake() {
   const { id } = useParams<{ id: string }>();
@@ -75,6 +75,20 @@ export default function CaseIntake() {
       confidence: l.metadata?.confidence as number | undefined,
       attackPattern: l.metadata?.attackPattern as string | undefined,
     }));
+
+  // Pull the typed IntakeResult off the latest `complete` SSE event. Falls
+  // back to null if the agent didn't emit a parseable JSON block — the
+  // checkpoint summary handles that case gracefully.
+  const intakeResult = useMemo(() => {
+    const completeLog = [...logs].reverse().find((l) => l.type === 'complete');
+    return parseIntakeFromMetadata(completeLog?.metadata);
+  }, [logs]);
+
+  const checkpointSummary = intakeResult
+    ? `Intake complete — ${intakeResult.documents.length} documents catalogued${
+        intakeResult.flags.length > 0 ? `, ${intakeResult.flags.length} flag${intakeResult.flags.length === 1 ? '' : 's'}` : ''
+      }${intakeResult.missingFields.length > 0 ? `, ${intakeResult.missingFields.length} missing field${intakeResult.missingFields.length === 1 ? '' : 's'}` : ''}.`
+    : 'Intake analysis complete — case classified, jurisdiction confirmed, opposing expert flagged.';
 
   const { error } = useCaseStore();
   if (error) return (
@@ -147,7 +161,7 @@ export default function CaseIntake() {
       {showCheckpoint && (
         <HumanCheckpointV2
           stage="intake"
-          summary="Intake analysis complete — case classified, jurisdiction confirmed, opposing expert flagged."
+          summary={checkpointSummary}
           findings={findings}
           onApprove={handleApprove}
           onRevise={handleRevise}
