@@ -3,31 +3,29 @@ import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-const SEED_PASSWORD = process.env.SEED_PASSWORD || 'change-me-in-production';
-
 async function main() {
   // Seed users
   const lane = await prisma.user.upsert({
-    where: { email: 'lane@swainstonconsulting.com' },
+    where: { email: 'lane@swainston.com' },
     update: {},
     create: {
       id: 'usr_lane',
       name: 'Lane Swainston',
-      email: 'lane@swainstonconsulting.com',
-      passwordHash: await bcrypt.hash(SEED_PASSWORD, 12),
+      email: 'lane@swainston.com',
+      passwordHash: await bcrypt.hash('savage-wins-2026', 12),
       role: 'admin',
     },
   });
 
   const mariz = await prisma.user.upsert({
-    where: { email: 'mariz@swainstonconsulting.com' },
+    where: { email: 'mariz@swainston.com' },
     update: {},
     create: {
       id: 'usr_mariz',
       name: 'Mariz Arellano',
-      email: 'mariz@swainstonconsulting.com',
-      passwordHash: await bcrypt.hash(SEED_PASSWORD, 12),
-      role: 'operator',
+      email: 'mariz@swainston.com',
+      passwordHash: await bcrypt.hash('scg-mariz-2026', 12),
+      role: 'consultant',
     },
   });
 
