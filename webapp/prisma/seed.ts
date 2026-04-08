@@ -4,22 +4,23 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await bcrypt.hash('savage-wins-2026', 12);
+  const lanePasswordHash = await bcrypt.hash('savage-wins-2026', 12);
+  const marizPasswordHash = await bcrypt.hash('scg-mariz-2026', 12);
 
   await prisma.user.upsert({
     where: { email: 'lane@swainston.com' },
-    update: { passwordHash, name: 'Lane Swainston', role: 'admin' },
-    create: { name: 'Lane Swainston', email: 'lane@swainston.com', passwordHash, role: 'admin' },
+    update: { passwordHash: lanePasswordHash, name: 'Lane Swainston', role: 'admin' },
+    create: { name: 'Lane Swainston', email: 'lane@swainston.com', passwordHash: lanePasswordHash, role: 'admin' },
   });
 
   await prisma.user.upsert({
     where: { email: 'mariz@swainston.com' },
-    update: { passwordHash, name: 'Mariz Arellano', role: 'operator' },
-    create: { name: 'Mariz Arellano', email: 'mariz@swainston.com', passwordHash, role: 'operator' },
+    update: { passwordHash: marizPasswordHash, name: 'Mariz Arellano', role: 'consultant' },
+    create: { name: 'Mariz Arellano', email: 'mariz@swainston.com', passwordHash: marizPasswordHash, role: 'consultant' },
   });
 
   console.log('✓ lane@swainston.com (admin)');
-  console.log('✓ mariz@swainston.com (operator)');
+  console.log('✓ mariz@swainston.com (consultant)');
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());
