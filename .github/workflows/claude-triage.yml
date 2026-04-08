@@ -1,0 +1,43 @@
+name: Claude Auto Triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          mode: triage
+          prompt: |
+            Triage issue #${{ github.event.issue.number }}.
+
+            Title: ${{ github.event.issue.title }}
+            Body: ${{ github.event.issue.body }}
+
+            Classify and apply labels:
+
+            TYPE (pick one): bug | feature | infra | docs | question
+            SEVERITY (pick one):
+              - sev-1  → production down, data loss, auth broken, Railway deploy failing
+              - sev-2  → pipeline stage broken, agent not returning, build broken on staging
+              - sev-3  → cosmetic, docs gap, non-blocking refactor
+            STAGE (pick one): intake | research | drafting | qa | infra | ui | auth | db
+
+            Actions:
+            1. Apply all three labels (create them if they don't exist).
+            2. If sev-1 or sev-2: assign to @calebswainston and add comment "@calebswainston — flagged sev-<N> by auto-triage, eyes-on needed".
+            3. Post a triage comment with:
+               - One-sentence restatement of the problem
+               - First-pass root cause hypothesis (3 possibilities, ranked by likelihood)
+               - Which files to check first (3 max, with paths)
+               - Whether this looks label-ready for `claude-fix` (only suggest for sev-3 bugs with clear repro)
+
+            Do not attempt a fix. Comment-only in this workflow.
