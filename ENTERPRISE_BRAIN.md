@@ -207,21 +207,69 @@ The Drafting Agent must recognize when a standard block applies and insert it ra
 | ASTM F2508 | BOT-3000E validation | BOT-3000E validated to this standard |
 | ASTM F2948-13 | Walkway Safety Auditor | Lane's UNT certification basis |
 
+**Detailed threshold tables:** `reference/nfsi-thresholds.md` (cite exact §/page from standard)
+
 ### Building Codes
 | Code | Notes |
 |------|-------|
 | International Building Code (IBC) | Current adopted code varies by jurisdiction and permit date |
 | Uniform Building Code (UBC) | Pre-IBC adoption — still applicable for older construction dates |
-| ADA / ICC A117.1 | Accessibility — [gap: Lane's analytical sequence not yet documented] |
+| ADA / ICC A117.1 | Accessibility — see ADA Enforcement Architecture below |
+
+### Code Adoption by Jurisdiction
+
+**Adoption process (Southern Nevada):** The Southern Nevada Building Officials (SNBO) adopt versions of the codes together, then an ordinance is passed by each political subdivision of the state to tweak the codes for local needs. Individual jurisdictions may have slightly different effective dates even though SNBO coordinates the adoption.
+
+**Adoption process (Utah):** The state adopts codes at the state level, not local.
+
+**Local development codes:** In both southern and northern Nevada, local development codes layer ON TOP of the base building code.
+
+**Data source:** SNBO directly, or Clark County Development Services official adoption records.
+
+**Jurisdiction lookup table:** `reference/nevada-code-table.md`
+- 6 jurisdictions: Clark County (unincorp.), Las Vegas, Henderson, North Las Vegas, Mesquite, Boulder City
+- 13 code editions: UBC 1985 through IBC 2021
+- Status: Effective dates pending SNBO records pull
+- NRS 278.580 governs state-level building code authority
+
+**Research Agent usage:** Look up property jurisdiction + permit date → find the row/column intersection in `nevada-code-table.md` → cite that edition. If cell is blank, jurisdiction had NOT adopted that edition — use the most recent adopted edition prior to permit date.
+
+### ADA / A117.1 Enforcement Architecture
+
+- **ADA (federal):** Enforced by the Department of Justice. Applies to places of public accommodation (Title III) and state/local government facilities (Title II).
+- **A117.1 (standards body):** Originally published as CABO/ANSI A117.1; now ICC A117.1. Incorporated by reference into the IBC.
+- **Historical note:** CABO (Council of American Building Officials) was the original publisher. ICC absorbed CABO. Older editions cite "CABO/ANSI A117.1"; current editions are "ICC A117.1."
+- The IBC adopted its own version of the A117.1 standards, so the **IBC edition determines which A117.1 edition applies** to a given property.
+
+**A117.1 → IBC edition mapping:** `reference/ada-edition-map.md`
+
+| A117.1 Edition | Referenced By |
+|---|---|
+| A117.1-1998 | IBC 2000, IBC 2003 |
+| A117.1-2003 | IBC 2006, IBC 2009 |
+| A117.1-2009 | IBC 2012 |
+| A117.1-2017 | IBC 2018, IBC 2021 |
+
+**ADA trigger logic (Research Agent):** If property is a place of public accommodation (Title III) AND construction/alteration date ≥ 1992-01-26 (ADA effective), then: (1) determine applicable IBC edition from `nevada-code-table.md`, (2) map IBC → A117.1 edition, (3) check A117.1 §302 (floor surfaces) and §303 (changes in level), (4) check IBC Chapter 11 interaction, (5) if altered after construction → ADA Standards for Accessible Design (28 CFR Part 36) apply to altered elements with 20% path-of-travel cost cap.
 
 ### Code Citation Methodology (5-step sequence)
 1. Identify permit/construction date
 2. Identify jurisdiction
-3. Confirm code edition adopted as of permit date
+3. Confirm code edition adopted as of permit date (via `reference/nevada-code-table.md`)
 4. Apply that edition's requirements to facts
 5. Distinguish unadopted standards plaintiff cited
 
 **Key phrase:** "The law matters. Textbooks and unadopted standards do not govern design and construction in Clark County."
+
+### Reference Files Index (§8 Supporting Data)
+| File | Contents | Status |
+|------|----------|--------|
+| `reference/nevada-code-table.md` | 6-jurisdiction × 13-edition adoption matrix | Effective dates pending SNBO pull |
+| `reference/ada-edition-map.md` | A117.1 edition timeline + ADA trigger logic | § citations pending from Lane/CBO |
+| `reference/nfsi-thresholds.md` | NFSI B101.1, B101.3, ANSI A326.3 thresholds | § and page numbers pending |
+| `reference/credential-registry.md` | SCG credential verification | Dates + renewal pending |
+| `reference/peterson-playbook.md` | Known adversary patterns | (see §10) |
+| `reference/cxlt-fallback.md` | CXLT tribometer protocol | |
 
 ---
 
@@ -334,7 +382,7 @@ How the 4 BlackBar agents query this brain during their Orient steps:
 
 These topics are not yet documented in VOICE.md or benchmark reports:
 
-- [ ] ADA / ICC A117.1 analytical sequence — how Lane structures accessibility opinions
+- [x] ADA / ICC A117.1 analytical sequence — merged into §8 (enforcement architecture + trigger logic + edition mapping). Detailed lookup: `reference/ada-edition-map.md`. §/page citations still pending from Lane/CBO.
 - [ ] Stair/riser/handrail code analysis — standard opening for stair cases
 - [ ] Fire code analysis structure (Category 10 cases)
 - [ ] "Model language" Lane considers settled vs. still evolving

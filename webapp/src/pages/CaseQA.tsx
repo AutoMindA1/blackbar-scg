@@ -35,21 +35,23 @@ export default function CaseQA() {
     return () => { cancelled = true; };
   }, [id]);
 
-  // When the QA agent finishes, refetch the scorecard and surface the checkpoint
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- checkpoint display is a UI response to agent completion
+  // When the QA agent finishes, refetch the scorecard and surface the checkpoint.
+  // Wrap state updates in the async callback (not top-level effect body) to satisfy
+  // react-hooks/set-state-in-effect — the fetch is the external system sync.
   useEffect(() => {
     if (status !== 'complete' || !id) return;
-    setShowCheckpoint(true);
+    let cancelled = false;
     api.getQAScorecard(id)
-      .then(({ qa }) => setScorecard(qa))
-      .catch(() => { /* keep prior state */ });
+      .then(({ qa }) => { if (!cancelled) { setScorecard(qa); setShowCheckpoint(true); } })
+      .catch(() => { if (!cancelled) setShowCheckpoint(true); });
+    return () => { cancelled = true; };
   }, [status, id]);
 
-  // Live update: when a qa_result SSE event arrives, hydrate immediately
-  useEffect(() => {
-    const liveQA = [...logs].reverse().find((l) => l.type === 'qa_result' && l.metadata?.qa);
-    if (liveQA?.metadata?.qa) setScorecard(liveQA.metadata.qa as QAScorecard);
-  }, [logs]);
+  // Live update: when a qa_result SSE event arrives, hydrate immediately.
+  // Derived value — no setState needed; recalculates on every render when logs change.
+  const liveQA = [...logs].reverse().find((l) => l.type === 'qa_result' && l.metadata?.qa);
+  const liveScorecard = liveQA?.metadata?.qa as QAScorecard | undefined;
+  const effectiveScorecard = liveScorecard ?? scorecard;
 
   const handleRunQA = async () => { if (!id) return; clearLogs(); setScorecard(null); await triggerAgent(id, 'qa'); };
   const handleApprove = async () => {
@@ -69,12 +71,12 @@ export default function CaseQA() {
 
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
 
-  // Real scorecard data — derived from agent output, not mocked
-  const score = scorecard?.score ?? 0;
-  const checks = scorecard?.checks ?? [];
-  const issues = scorecard?.issues ?? [];
+  // Real scorecard data — derived from agent output or live SSE, not mocked
+  const score = effectiveScorecard?.score ?? 0;
+  const checks = effectiveScorecard?.checks ?? [];
+  const issues = effectiveScorecard?.issues ?? [];
   const passCount = checks.filter((c) => c.status === 'pass').length;
-  const hasScorecard = scorecard !== null;
+  const hasScorecard = effectiveScorecard !== null;
 
   return (
     <div className="page-enter">
@@ -89,7 +91,7 @@ export default function CaseQA() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         <div className="lg:col-span-2 space-y-6">
           <QADashboard
-            scorecard={scorecard}
+            scorecard={effectiveScorecard}
             loaded={scorecardLoaded}
             running={status === 'running'}
             actionSlot={<ContextualActionButton stage="qa" status={status} onAction={handleRunQA} />}

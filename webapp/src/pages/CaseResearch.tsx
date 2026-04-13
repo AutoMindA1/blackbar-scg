@@ -40,6 +40,7 @@ export default function CaseResearch() {
   // Prefer the typed ResearchResult emitted by the Research agent's structured
   // JSON contract. Fall back to a heuristic prose-parser over `finding` events
   // for older runs / partial data.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Compiler can't trace the prose-parser heuristic; manual memo is correct
   const citations: Citation[] = useMemo(() => {
     const completeLog = [...logs].reverse().find((l) => l.type === 'complete');
     const typed = parseResearchFromMetadata(completeLog?.metadata);

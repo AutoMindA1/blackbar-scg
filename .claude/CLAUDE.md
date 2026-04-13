@@ -43,7 +43,7 @@ Next steps:
 
 ## Pending Work
 
-- [ ] Merge `BRAIN_S8_CODE_ADOPTION_TABLES.md` into ENTERPRISE_BRAIN.md Section 8
+- [x] Merge code adoption tables into ENTERPRISE_BRAIN.md Section 8 (done 2026-04-12 — adoption process, jurisdiction matrix, ADA enforcement architecture, reference file index)
 - [ ] Package AISDLC Product Architect as `.skill` file
 - [ ] Deploy webapp to Railway
 - [ ] Replace mocked SSE agents with real agent pipeline
