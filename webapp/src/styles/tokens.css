@@ -1,0 +1,182 @@
+/* ============================================================
+ * BlackBar v2 Design System — Forensic Noir × Dannaway Craft
+ * v1.0 · 2026-04-16
+ *
+ * Status: ADDITIVE layer. Imported alongside index.css.
+ * Components migrate to these tokens progressively — see MIGRATION.md.
+ *
+ * Source: /Brand/DESIGN_TOKENS_v1.md and /Brand/UI_REFERENCE_v1.html
+ * Persona driving decisions: /.claude/PERSONA_CHERNY_DANNAWAY.md
+ * ============================================================ */
+
+:root {
+  /* ----- Color — HSL-based, no pure black/white ----- */
+  --noir-0: #0B0D10;           /* page canvas */
+  --noir-1: #14171C;           /* card surface */
+  --noir-2: #1C2028;           /* elevated (hover, modal) */
+  --noir-3: #272C36;           /* border / divider */
+
+  --signal-amber: #FF6B35;                         /* primary accent */
+  --signal-amber-soft: rgba(255, 107, 53, 0.12);   /* accent tint */
+  --signal-amber-border: rgba(255, 107, 53, 0.35); /* pill borders */
+
+  --bone: #ECE9E2;             /* primary text */
+  --bone-muted: #A8A59C;       /* secondary */
+  --bone-dim: #6B685F;         /* tertiary / placeholder */
+
+  --verdict-green: #4F9D69;
+  --verdict-green-soft: rgba(79, 157, 105, 0.14);
+  --verdict-amber: #D9A441;
+  --verdict-amber-soft: rgba(217, 164, 65, 0.14);
+  --verdict-red: #C1462B;
+  --verdict-red-soft: rgba(193, 70, 43, 0.14);
+
+  /* ----- Typography ----- */
+  --font-display-v2: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-ui-v2: "Inter Tight", "Inter", system-ui, sans-serif;
+  --font-mono-v2: "JetBrains Mono", ui-monospace, monospace;
+
+  --fs-display: clamp(2.25rem, 4vw, 3.5rem);
+  --fs-h1: clamp(1.75rem, 2.5vw, 2.25rem);
+  --fs-h2: 1.375rem;
+  --fs-h3: 1.125rem;
+  --fs-body: 0.9375rem;
+  --fs-small: 0.8125rem;
+  --fs-micro: 0.6875rem;
+
+  --lh-display: 1.1;
+  --lh-heading: 1.2;
+  --lh-body: 1.55;
+  --lh-tight: 1.4;
+
+  --tracking-display: -0.02em;
+  --tracking-heading: -0.01em;
+  --tracking-micro: 0.08em;
+
+  /* ----- Spacing — 4 base, 8px rhythm ----- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* ----- Radii ----- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* ----- Shadow ----- */
+  --shadow-sm: 0 1px 0 rgb(0 0 0 / 0.5);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 24px 48px -16px rgb(0 0 0 / 0.7);
+  --shadow-focus: 0 0 0 3px rgba(255, 107, 53, 0.4);
+
+  /* ----- Motion ----- */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --ease-forensic: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.28, 0.64, 1);
+}
+
+/* ============================================================
+ * Utility classes — v2 only. Use these in new components.
+ * Existing glassmorphism / glow utilities stay in index.css
+ * until their components are migrated.
+ * ============================================================ */
+
+.v2-surface {
+  background: var(--noir-1);
+  border: 1px solid var(--noir-3);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.v2-surface-elevated {
+  background: var(--noir-2);
+  border: 1px solid var(--noir-3);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.v2-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui-v2);
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: -0.005em;
+  border: 0;
+  cursor: pointer;
+  transition: all var(--duration-base) var(--ease-forensic);
+  text-decoration: none;
+}
+.v2-btn:focus-visible { outline: 0; box-shadow: var(--shadow-focus); }
+.v2-btn-primary { background: var(--signal-amber); color: var(--noir-0); }
+.v2-btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.v2-btn-primary:active { transform: translateY(0); filter: brightness(0.95); }
+.v2-btn-ghost { background: transparent; color: var(--bone); border: 1px solid var(--noir-3); }
+.v2-btn-ghost:hover { background: var(--noir-2); border-color: var(--bone-muted); }
+
+.v2-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  font-family: var(--font-mono-v2);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.v2-pill-pending { background: var(--noir-2); color: var(--bone-dim); }
+.v2-pill-running { background: var(--signal-amber-soft); color: var(--signal-amber); }
+.v2-pill-complete { background: var(--verdict-green-soft); color: var(--verdict-green); }
+.v2-pill-failed { background: var(--verdict-red-soft); color: var(--verdict-red); }
+.v2-pill-blind { background: var(--signal-amber-soft); color: var(--signal-amber); border: 1px solid var(--signal-amber-border); }
+
+.v2-micro {
+  font-family: var(--font-ui-v2);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-micro);
+  font-weight: 500;
+  color: var(--bone-muted);
+}
+
+.v2-display {
+  font-family: var(--font-display-v2);
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--lh-display);
+  font-variation-settings: "opsz" 80;
+}
+
+.v2-mono {
+  font-family: var(--font-mono-v2);
+  font-size: var(--fs-small);
+}
+
+.v2-focus-ring:focus-visible {
+  outline: 0;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Reduced-motion floor — non-negotiable */
+@media (prefers-reduced-motion: reduce) {
+  .v2-btn, .v2-surface, [class*="v2-"] {
+    transition: none !important;
+    animation: none !important;
+  }
+}

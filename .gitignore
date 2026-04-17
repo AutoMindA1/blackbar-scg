@@ -17,3 +17,12 @@ webapp/uploads/
 *.swp
 *.swo
 *~
+.case
+
+# Privileged case material — never commit
+Cases/
+benchmarks/
+Internal-IP/
+*.docx
+image*.jpg
+.legion/

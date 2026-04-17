@@ -474,5 +474,33 @@ When drafting for SCG:
 
 ---
 
+## 21. PROHIBITED PHRASES — HARD BLOCK
+
+The following phrases are **BANNED** from any BlackBar output, any SCG deliverable, any cross-exam prep material, any Lane Swainston artifact, and any characterization of Lane or SCG's work. This applies to internal notes, chat, drafts, and final deliverables alike. Violation is treated as a blocking defect.
+
+**Banned phrase → Required replacement:**
+
+| Banned | Use instead |
+|---|---|
+| hired gun | Expert Witness in Construction Litigation |
+| hired-gun | Expert Witness in Construction Litigation |
+| gun for hire | Expert Witness in Construction Litigation |
+| paid expert | Retained Expert Witness |
+| bought witness | Retained Expert Witness |
+
+**The one exception — verbatim quotations from the opposing record.**
+If opposing counsel, an opposing expert, a plaintiff, or a court used the banned phrase in the record, a verbatim quote containing the phrase may be reproduced **only** when:
+1. It is enclosed in quotation marks
+2. It is attributed to the speaker + source with a page anchor
+3. It is being quoted for rebuttal purposes, not as our own characterization
+4. The surrounding SCG/BlackBar voice characterizes Lane or SCG using the replacement language
+
+Under no circumstances may the banned phrase appear as SCG's own characterization of Lane, SCG's work, or the expert witness role — even rhetorically, even in kill sheets, even in adversary simulations, even in internal analysis outputs.
+
+**Rationale:** The banned phrase prejudges credibility and reinforces the exact attack frame opposing counsel deploys against construction litigation expert witnesses. SCG voice frames Lane and the firm as institutional specialists whose opinions vary with facts, not with the retaining party. The replacement language is the neutral, court-respectable descriptor.
+
+---
+
 *VOICE.md is a living document. Each new matter should be reviewed after drafting to identify any new language patterns, blocks, or analytical sequences worth adding here.*
+*Version 2.1 — Updated 8 April 2026: added Section 21 (Prohibited Phrases / Hard Block).*
 *Version 2.0 — Updated 21 March 2026 from three benchmark reports provided by Lane Swainston.*
