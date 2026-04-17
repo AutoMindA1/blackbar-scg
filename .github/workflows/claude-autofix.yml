@@ -1,0 +1,57 @@
+name: Claude Auto Fix
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  fix:
+    # Label-gated to prevent PR storms
+    if: github.event.label.name == 'claude-fix'
+    runs-on: ubuntu-latest
+    # Hard cap: kill the job if it runs long — prevents runaway token burn
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: webapp/package-lock.json
+
+      - name: Install deps
+        run: cd webapp && npm ci
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          mode: agent
+          prompt: |
+            You are fixing a BlackBar issue autonomously.
+
+            Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+
+            Body:
+            ${{ github.event.issue.body }}
+
+            Rules:
+            1. Branch from staging as `fix/issue-${{ github.event.issue.number }}`.
+            2. Read .claude/CLAUDE.md and CLAUDE.md FIRST. Respect all hard rules.
+            3. Never touch webapp/package.json "start" script.
+            4. Never add tsx to dependencies.
+            5. Schema changes require `npx prisma migrate dev --name <desc>`.
+            6. Run `cd webapp && npm run lint && npx tsc --noEmit && npm run build` before committing.
+            7. If build fails, fix and retry up to 3 times, then bail and comment on the issue.
+            8. Open a PR back to `staging` (NEVER main) titled `fix: #${{ github.event.issue.number }} <short>`.
+            9. PR body must link the issue, list files changed, and confirm hard rules checked.
+            10. Comment on the original issue with PR link.
+
+            Stay in scope. Do not refactor unrelated code. Do not touch Cases/ or benchmarks/.

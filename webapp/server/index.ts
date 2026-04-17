@@ -27,7 +27,15 @@ app.use(helmet({
       fontSrc: ["'self'"],
     },
   },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
 }));
+
+// Prevent information leakage
+app.disable('x-powered-by');
 
 // CORS — require explicit origins in production, block localhost
 if (!process.env.ALLOWED_ORIGINS && process.env.NODE_ENV === 'production') {
@@ -56,7 +64,11 @@ app.use('/api/cases', documentRoutes);   // POST /:id/documents, GET /:id/docume
 app.use('/api/cases', agentRoutes);      // POST /:id/agents/:stage, GET /:id/agents/stream, POST /:id/approve
 app.use('/api/cases', reportRoutes);     // GET /:id/report, PUT /:id/report, POST /:id/export
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/api/health', (_req, res) => res.json({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  version: process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 7) || 'dev',
+}));
 
 // Serve Vite build in production.
 // Layout when running compiled (Railway):

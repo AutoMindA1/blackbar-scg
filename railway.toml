@@ -4,9 +4,11 @@
 # Both services use identical build/deploy commands
 
 [build]
-buildCommand = "cd webapp && npm install && npm run build"
+buildCommand = "cd webapp && npm install && npx prisma generate && npm run build"
 
 [deploy]
 startCommand = "cd webapp && node dist/server/index.js"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

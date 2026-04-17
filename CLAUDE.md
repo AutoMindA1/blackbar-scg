@@ -44,10 +44,21 @@ Sequential: Intake → Research → Drafting → QA
 - QA skill: `.claude/skills/qa-pipeline/SKILL.md`
 
 ## Quick Reference
+- `STATE.md` — **Current webapp state + 5-PR build sequence (read first on any UI task)**
 - `QUICKFIND.md` — "I need X → go to Y" lookup
 - `DIRECTORY_MAP.md` — Full file inventory
 - `ARCHITECTURE_AUDIT_v1.1.md` — Current arch assessment
-- `BLACKBAR_UI_SPEC_v3.md` — Latest UI spec
+- `BLACKBAR_UI_SPEC_v3.md` — Legacy UI spec (superseded by v2 design system below)
+
+## Design System v2 — Forensic Noir × Dannaway Craft
+Active 2026-04-16. Drives all new UI work.
+- `Brand/DESIGN_TOKENS_v1.md` — canonical token spec
+- `Brand/UI_REFERENCE_v1.html` — living reference (open in browser)
+- `webapp/src/styles/tokens.css` — implemented CSS (additive layer, non-breaking)
+- `webapp/src/styles/MIGRATION.md` — v1 → v2 token map
+- `.claude/PERSONA_CHERNY_DANNAWAY.md` — system prompt that drives decisions
+
+Core design rules: no glassmorphism as identity · no gradients · Inter Tight (not Inter) + Fraunces · no pure black/white · 8px rhythm · every surface has empty/loading/error states · `prefers-reduced-motion` honored · `[AGENT BLIND]` pill on any feature lacking agent reasoning. Migrate one component per PR.
 
 ## Environment
 - .env at project ROOT (not webapp/) — DATABASE_URL, JWT_SECRET, PORT

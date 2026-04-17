@@ -1,0 +1,51 @@
+name: Claude Auto Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'Brand/**'
+      - 'Cases/**'
+      - 'reports/**'
+
+jobs:
+  review:
+    # Skip drafts and hotfixes to save tokens
+    if: "github.event.pull_request.draft == false && !contains(github.event.pull_request.labels.*.name, 'hotfix')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          mode: review
+          prompt: |
+            Review this PR against BLACK-BAR hard rules from .claude/CLAUDE.md and CLAUDE.md.
+
+            BLOCKING violations (request changes, do not approve):
+            - `tsx` present in webapp/package.json "start" script
+            - `tsx` added to webapp/package.json "dependencies" (must be devDependencies only)
+            - webapp/package.json "start" script is anything other than `node dist/server/index.js`
+            - schema.prisma changed without a corresponding prisma/migrations/ entry
+            - prowl.ts, sentinel.ts, or pipelineMetrics.ts wired into production routes
+            - grep -P used in any shell script (BSD grep incompatible — use grep -E)
+            - Direct push to main without staging first (check base branch)
+            - Files created in Cases/ or benchmarks/ (privileged — never commit without explicit request)
+            - VOICE.md edited (Lane's voice — tone changes require explicit approval)
+            - ENTERPRISE_BRAIN.md overwritten without diff preview in PR description
+
+            NON-BLOCKING (comment only, still approve):
+            - New routes without tests
+            - Missing JSDoc on new public functions
+            - Unused imports
+
+            Comment inline on every blocking violation with file:line and the rule number.
+            Approve if all checks pass. Be direct, no hedging.

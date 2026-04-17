@@ -30,7 +30,6 @@ export default function DraftEditor({ content, onChange, editable = true }: Draf
     if (editor.getHTML() !== content) {
       editor.commands.setContent(content || '<p></p>', { emitUpdate: false });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content, editor]);
 
   useEffect(() => {

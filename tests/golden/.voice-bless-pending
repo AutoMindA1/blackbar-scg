@@ -1,0 +1,9 @@
+gleason
+heagy
+anderson
+
+Generated: 2026-04-15
+Reason: Cases/<id>/expected/ not present on this machine.
+Action: run /ultraplan voice-bless <id> on the machine staging the privileged
+        case data, then delete this file in the same commit as the generated
+        .voice.json files.
