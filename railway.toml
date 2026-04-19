@@ -1,13 +1,18 @@
 # BlackBar Railway Configuration
 # Production: main branch → blackbar-scg-production.up.railway.app
-# Staging: staging branch → configured separately in Railway dashboard
-# Both services use identical build/deploy commands
+#
+# Contract:
+#   Build  → install deps, generate Prisma client, compile server + client.
+#   Start  → apply any pending migrations, then run compiled server.
+# Migrations are applied at START (not build) so the build env doesn't need
+# live DATABASE_URL; Railway provides it at runtime. `prisma migrate deploy`
+# is idempotent — safe on every restart.
 
 [build]
 buildCommand = "cd webapp && npm install && npx prisma generate && npm run build"
 
 [deploy]
-startCommand = "cd webapp && node dist/server/index.js"
+startCommand = "cd webapp && npx prisma migrate deploy && node dist/server/index.js"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
