@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Header from '../components/layout/Header';
 import StageNavV2 from '../components/shared/StageNavV2';
 import AgentActivityFeedV2 from '../components/shared/AgentActivityFeedV2';
@@ -7,6 +8,7 @@ import HumanCheckpointV2 from '../components/shared/HumanCheckpointV2';
 import ContextualActionButton from '../components/shared/ContextualActionButton';
 import SkeletonLoader from '../components/shared/SkeletonLoader';
 import FileDropzone from '../components/shared/FileDropzone';
+import NoteList from '../components/shared/NoteList';
 import CaseForm from '../components/shared/CaseForm';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
@@ -84,9 +86,18 @@ export default function CaseIntake() {
     return parseIntakeFromMetadata(completeLog?.metadata);
   }, [logs]);
 
+  // Source of truth for note count is the DB, not the agent's self-reported noteCount.
+  const { data: notesData } = useQuery({
+    queryKey: ['notes', id],
+    queryFn: () => api.getNotes(id!),
+    enabled: !!id,
+  });
+  const noteCount = notesData?.notes.length ?? 0;
+
   const checkpointSummary = intakeResult
-    ? `Intake complete — ${intakeResult.documents.length} documents catalogued${
-        intakeResult.flags.length > 0 ? `, ${intakeResult.flags.length} flag${intakeResult.flags.length === 1 ? '' : 's'}` : ''
+    ? `Intake complete — ${intakeResult.documents.length} document${intakeResult.documents.length === 1 ? '' : 's'} catalogued${
+        noteCount > 0 ? `, ${noteCount} note${noteCount === 1 ? '' : 's'} reviewed` : ''
+      }${intakeResult.flags.length > 0 ? `, ${intakeResult.flags.length} flag${intakeResult.flags.length === 1 ? '' : 's'}` : ''
       }${intakeResult.missingFields.length > 0 ? `, ${intakeResult.missingFields.length} missing field${intakeResult.missingFields.length === 1 ? '' : 's'}` : ''}.`
     : 'Intake analysis complete — case classified, jurisdiction confirmed, opposing expert flagged.';
 
@@ -116,15 +127,19 @@ export default function CaseIntake() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         {/* Left — Upload + Action (Steps 1 & 2) */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Step 1: Upload */}
+          {/* Case Materials: documents + notes */}
           <div className="glass rounded-2xl p-6">
-            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Step 1: Upload Documents</h3>
+            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Step 1: Case Materials</h3>
             <FileDropzone
               documents={activeCase.documents}
               uploading={uploading}
               onFiles={handleFiles}
               hint="Expert reports, depositions, photos · PDF page counts auto-extracted"
             />
+            <div style={{ marginTop: 'var(--space-5)', paddingTop: 'var(--space-5)', borderTop: '1px solid var(--noir-3)' }}>
+              <p className="v2-micro" style={{ marginBottom: 'var(--space-3)' }}>Notes</p>
+              <NoteList caseId={id!} />
+            </div>
           </div>
 
           {/* Step 2: Run Analysis */}

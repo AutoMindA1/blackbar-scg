@@ -20,6 +20,8 @@ export interface IntakeResult {
   missingFields: string[];
   caseType: string;
   reportType: string;
+  noteCount?: number;
+  notesSummary?: string;
 }
 
 export interface ResearchResult {

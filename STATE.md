@@ -31,7 +31,7 @@ The gap between where BlackBar is and where it needs to be is entirely in the **
 | PDF export | ✅ DONE | Puppeteer, SCG headers/footers |
 | DOCX export | ✅ DONE | html-to-docx, 12pt Times, 1in margins |
 | HTML export | ✅ DONE | Client-side |
-| **Notes / annotations** | ❌ MISSING | No Note model, no API, no UI |
+| **Notes / annotations** | ✅ DONE | Note model, /api/cases/:id/notes (POST/GET/DELETE), NoteList component, Intake agent context |
 | **Image preview modal** | 🟡 STUBBED | Upload works, Eye icon is no-op |
 | **Unified capture surface** | 🟡 FRAGMENTED | FileDropzone exists; notes and photos not co-located |
 | **Image content reasoning (OCR / vision)** | ❌ MISSING | Images are [AGENT BLIND] |
@@ -123,6 +123,7 @@ Translating: intake should be a **single choreographed capture surface** where L
 4. Generate public domain.
 5. Smoke test: login → create case → upload doc → run Intake → export PDF.
 6. Confirm `package.json` start is `node dist/server/index.js`. Confirm `tsx` is devDependency only.
+7. **`[PREREQ — schema sync]`** Add `npx prisma db push` to `railway.toml` buildCommand before deploying. The `notes` table (PR 1) and any future schema additions must be synced before the app boots. Current `buildCommand` is `cd webapp && npm install && npx prisma generate && npm run build` — insert `npx prisma db push &&` before `npm run build`.
 
 **Ship criteria:** Public URL, login works, full pipeline runs on deployed instance, PDF downloads.
 

@@ -15,6 +15,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     err.status = res.status;
     throw err;
   }
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
@@ -33,6 +34,14 @@ export const api = {
     request<CaseDetail>('/cases', { method: 'POST', body: JSON.stringify(data) }),
   updateCase: (id: string, data: Record<string, unknown>) =>
     request<CaseDetail>(`/cases/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // Notes
+  getNotes: (caseId: string) =>
+    request<{ notes: Note[] }>(`/cases/${caseId}/notes`),
+  createNote: (caseId: string, body: string) =>
+    request<{ note: Note }>(`/cases/${caseId}/notes`, { method: 'POST', body: JSON.stringify({ body }) }),
+  deleteNote: (caseId: string, noteId: string) =>
+    request<void>(`/cases/${caseId}/notes/${noteId}`, { method: 'DELETE' }),
 
   // Documents
   uploadDocuments: (caseId: string, files: File[]) => {
@@ -100,6 +109,10 @@ export interface CaseDetail {
   documents: Doc[]; agentLogs: AgentLog[]; report: ReportData | null;
 }
 
+export interface Note {
+  id: string; caseId: string; body: string; createdAt: string; updatedAt: string;
+}
+
 export interface Doc {
   id: string; filename: string; filepath: string; sizeBytes: number | null; pageCount: number | null; uploadedAt: string;
 }
@@ -135,6 +148,8 @@ export interface IntakeResult {
   missingFields: string[];
   caseType: string;
   reportType: string;
+  noteCount?: number;
+  notesSummary?: string;
 }
 
 export interface ResearchResult {

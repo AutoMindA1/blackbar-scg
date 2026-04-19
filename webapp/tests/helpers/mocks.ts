@@ -34,6 +34,13 @@ export function createMockPrisma() {
       create: vi.fn(),
       count: vi.fn(),
     },
+    note: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
+    },
     agentLog: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
@@ -114,6 +121,14 @@ export const SYNTHETIC_DOCUMENT = {
   sizeBytes: 45000,
   pageCount: 3,
   uploadedAt: new Date('2026-04-01'),
+};
+
+export const SYNTHETIC_NOTE = {
+  id: 'note-001',
+  caseId: 'case-001',
+  body: 'Opposing expert failed to document the lighting conditions at the time of the incident.',
+  createdAt: new Date('2026-04-17T10:00:00Z'),
+  updatedAt: new Date('2026-04-17T10:00:00Z'),
 };
 
 export const SYNTHETIC_REPORT = {

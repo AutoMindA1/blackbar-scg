@@ -97,7 +97,9 @@ After your prose analysis, end your response with a single fenced JSON block mat
   "flags": ["string"],
   "missingFields": ["string"],
   "caseType": "string",
-  "reportType": "string"
+  "reportType": "string",
+  "noteCount": 0,
+  "notesSummary": "optional — one sentence summarising note themes if notes were provided"
 }
 \`\`\``,
 
