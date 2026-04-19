@@ -114,17 +114,20 @@ Translating: intake should be a **single choreographed capture surface** where L
 
 ### PR 5 — Deploy to Railway
 **Zone:** Cross-cutting
-**Hard rules touched:** `[HARD RULE]` start script must stay `node dist/server/index.js`
+**Hard rules touched:** `[HARD RULE]` start script ends in `node dist/server/index.js`
 **Agent-honesty risk:** none
+**Status:** Largely done as of 2026-04-19. Site is live at `blackbar-scg-production.up.railway.app` in construction mode. Deploy-hardening PR (see below) resolved the Node-version build failure and tracked-migrations gap.
 
-1. Connect GitHub repo as new Railway service.
-2. Root directory `webapp`.
-3. Env vars: `DATABASE_URL` (internal), `JWT_SECRET`, `PORT`, `ANTHROPIC_API_KEY`.
-4. Generate public domain.
-5. Smoke test: login → create case → upload doc → run Intake → export PDF.
-6. Confirm `package.json` start is `node dist/server/index.js`. Confirm `tsx` is devDependency only.
+- [x] GitHub repo connected as Railway service
+- [x] Root directory `webapp`
+- [x] Env vars set: `DATABASE_URL` (internal), `JWT_SECRET`, `SEED_LANE_PASSWORD`, `SEED_MARIZ_PASSWORD`, `ALLOWED_ORIGINS`, `ANTHROPIC_API_KEY`, `NODE_ENV=production`
+- [x] Public domain generated
+- [x] Node 22 pinned via `.nvmrc` + `package.json` engines
+- [x] Migrations tracked in git and auto-applied via `railway.toml` startCommand (`prisma migrate deploy &&`)
+- [x] `DATABASE.md` runbook committed
+- [ ] Smoke test: login → create case → upload doc → run Intake → export PDF (run after deploy-hardening merges)
 
-**Ship criteria:** Public URL, login works, full pipeline runs on deployed instance, PDF downloads.
+**Ship criteria:** Public URL, login works on `lane@swainstonconsulting.com`, full pipeline runs on deployed instance, PDF downloads.
 
 ---
 
@@ -138,9 +141,9 @@ Translating: intake should be a **single choreographed capture surface** where L
 
 ## Stale Docs to Fix (one-liner each)
 
-- `/BLACK-BAR/.claude/CLAUDE.md` — remove "(mocked SSE)" from the "4 agents" line.
-- `/BLACK-BAR/CLAUDE.md` — architecture summary should note agents are live Claude calls with typed contracts, not "multi-agent pipeline webapp" (accurate but understated).
-- Consider a `STATE.md` at project root summarizing the punch list above — updated at end of each PR.
+- [x] `/BLACK-BAR/.claude/CLAUDE.md` — "(mocked SSE)" note on 4 agents removed.
+- [x] `/BLACK-BAR/CLAUDE.md` — deploy workflow rewritten, hard rules clarified, `DATABASE.md` pointer added (deploy-hardening PR).
+- [x] `STATE.md` at project root — this file.
 
 ---
 
