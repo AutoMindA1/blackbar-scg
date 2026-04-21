@@ -15,13 +15,14 @@ interface HumanCheckpointV2Props {
   summary: string;
   findings?: Finding[];
   qaScore?: number;
+  documentCount?: number;
   onApprove: () => void;
   onRevise: (notes: string) => void;
   onReject: () => void;
 }
 
 function ScoreGauge({ score }: { score: number }) {
-  const color = score >= 90 ? 'var(--color-success)' : score >= 70 ? 'var(--color-warning)' : 'var(--color-error)';
+  const color = score >= 85 ? 'var(--color-success)' : score >= 70 ? 'var(--color-warning)' : 'var(--color-error)';
   const circumference = 2 * Math.PI * 44;
   const offset = circumference - (score / 100) * circumference;
 
@@ -48,6 +49,7 @@ export default function HumanCheckpointV2({
   summary,
   findings,
   qaScore,
+  documentCount,
   onApprove,
   onRevise,
   onReject,
@@ -73,11 +75,11 @@ export default function HumanCheckpointV2({
   };
 
   const stageLabel = stage.charAt(0).toUpperCase() + stage.slice(1);
+  const findingCount = findings?.length ?? 0;
 
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -87,101 +89,137 @@ export default function HumanCheckpointV2({
           onClick={() => setMode('actions')}
         />
 
-        {/* Modal */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 8 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 8 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-2xl glass-elevated rounded-2xl overflow-hidden"
+          className="v2-surface-elevated relative w-full max-w-2xl rounded-2xl overflow-hidden"
         >
-          {/* Bear watermark behind modal */}
           <BearMark variant={approving ? 'glow' : 'watermark'} opacity={approving ? 0.08 : 0.05} />
 
-        <div className="relative z-10 p-8">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
-              {stageLabel} Complete
-            </h2>
-            <p className="text-sm text-[var(--color-text-secondary)] mt-2">{summary}</p>
-          </div>
-
-          {/* QA Score */}
-          {qaScore !== undefined && <ScoreGauge score={qaScore} />}
-
-          {/* Findings */}
-          {findings && findings.length > 0 && (
-            <div className="mb-6 space-y-2 max-h-48 overflow-y-auto">
-              {findings.map((f) => (
-                <div key={f.id} className="flex items-start gap-3 px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
-                  {f.attackPattern && (
-                    <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--color-accent-primary)]/15 text-[var(--color-accent-primary)]">
-                      {f.attackPattern}
-                    </span>
-                  )}
-                  <span className="text-sm text-[var(--color-text-secondary)] flex-1">{f.message}</span>
-                  {f.confidence !== undefined && (
-                    <span className="shrink-0 text-xs font-mono text-[var(--color-info)]">
-                      {Math.round(f.confidence * 100)}%
-                    </span>
-                  )}
-                </div>
-              ))}
+          <div className="relative z-10 p-8">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+                {stageLabel} Complete
+              </h2>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-2">{summary}</p>
             </div>
-          )}
 
-          {/* Actions */}
-          {mode === 'actions' ? (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleApprove}
-                disabled={approving}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-hover)] text-white font-semibold rounded-xl transition-all disabled:opacity-60"
+            {/* Command-center stats row */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div
+                className="rounded-xl p-3 text-center"
+                style={{ background: 'var(--noir-1)', border: '1px solid var(--noir-3)' }}
               >
-                <Check size={18} />
-                {approving ? 'Approving...' : 'Approve & Continue'}
-              </button>
-              <button
-                onClick={() => setMode('revise')}
-                className="flex items-center justify-center gap-2 px-5 py-3.5 bg-[var(--color-bg-elevated)] hover:bg-[var(--color-bg-glass)] text-[var(--color-text-secondary)] font-medium rounded-xl border border-[var(--color-border)] transition-all"
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{findingCount}</p>
+                <p className="text-[10px] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mt-1">Findings</p>
+              </div>
+              <div
+                className="rounded-xl p-3 text-center"
+                style={{ background: 'var(--noir-1)', border: '1px solid var(--noir-3)' }}
               >
-                <RotateCcw size={16} />
-                Revise
-              </button>
-              <button
-                onClick={onReject}
-                className="flex items-center justify-center gap-2 px-4 py-3.5 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors"
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{documentCount ?? 0}</p>
+                <p className="text-[10px] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mt-1">Documents</p>
+              </div>
+              <div
+                className="rounded-xl p-3 text-center"
+                style={{ background: 'var(--noir-1)', border: '1px solid var(--noir-3)' }}
               >
-                <X size={16} />
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="What should the agent do differently?"
-                className="w-full h-24 px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)] resize-none"
-                autoFocus
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={handleRevise}
-                  disabled={!notes.trim()}
-                  className="flex-1 px-5 py-3 bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-hover)] text-white font-semibold rounded-xl transition-colors disabled:opacity-40"
-                >
-                  Submit Revision
-                </button>
-                <button
-                  onClick={() => setMode('actions')}
-                  className="px-5 py-3 bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] font-medium rounded-xl border border-[var(--color-border)]"
-                >
-                  Cancel
-                </button>
+                <p className="text-2xl font-bold" style={{ color: qaScore !== undefined ? (qaScore >= 85 ? 'var(--color-success)' : qaScore >= 70 ? 'var(--color-warning)' : 'var(--color-error)') : 'var(--color-text-muted)' }}>
+                  {qaScore ?? '—'}
+                </p>
+                <p className="text-[10px] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mt-1">QA Score</p>
               </div>
             </div>
-          )}
+
+            {/* QA gauge when score present */}
+            {qaScore !== undefined && <ScoreGauge score={qaScore} />}
+
+            {/* Findings list */}
+            {findings && findings.length > 0 && (
+              <div className="mb-6 space-y-2 max-h-48 overflow-y-auto">
+                {findings.map((f) => (
+                  <div
+                    key={f.id}
+                    className="flex items-start gap-3 px-4 py-3 rounded-xl border"
+                    style={{
+                      background: 'var(--signal-amber-soft)',
+                      borderColor: 'var(--signal-amber-border)',
+                      borderLeft: '2px solid var(--signal-amber)',
+                    }}
+                  >
+                    {f.attackPattern && (
+                      <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--signal-amber-soft)', color: 'var(--signal-amber)' }}>
+                        {f.attackPattern}
+                      </span>
+                    )}
+                    <span className="text-sm text-[var(--color-text-secondary)] flex-1">{f.message}</span>
+                    {f.confidence !== undefined && (
+                      <span className="shrink-0 text-xs font-mono text-[var(--color-info)]">
+                        {Math.round(f.confidence * 100)}%
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Actions */}
+            {mode === 'actions' ? (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleApprove}
+                  disabled={approving}
+                  className="v2-btn v2-btn-primary flex-1 flex items-center justify-center gap-2 py-3.5 font-semibold rounded-xl transition-all disabled:opacity-60"
+                >
+                  <Check size={18} />
+                  {approving ? 'Approving...' : 'Approve & Continue'}
+                </button>
+                <button
+                  onClick={() => setMode('revise')}
+                  className="v2-btn v2-btn-ghost flex items-center justify-center gap-2 px-5 py-3.5 font-medium rounded-xl transition-all"
+                >
+                  <RotateCcw size={16} />
+                  Revise
+                </button>
+                <button
+                  onClick={onReject}
+                  aria-label="Dismiss checkpoint"
+                  className="flex items-center justify-center px-4 py-3.5 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-error)] rounded-lg"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="What should the agent do differently?"
+                  className="w-full h-24 px-4 py-3 rounded-xl text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none resize-none"
+                  style={{ background: 'var(--noir-1)', border: '1px solid var(--noir-3)' }}
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
+                  autoFocus
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleRevise}
+                    disabled={!notes.trim()}
+                    className="v2-btn v2-btn-primary flex-1 py-3 font-semibold rounded-xl transition-colors disabled:opacity-40"
+                  >
+                    Submit Revision
+                  </button>
+                  <button
+                    onClick={() => setMode('actions')}
+                    className="v2-btn v2-btn-ghost px-5 py-3 font-medium rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

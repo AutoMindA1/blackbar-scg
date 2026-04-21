@@ -9,7 +9,7 @@ interface QADashboardProps {
 }
 
 function ScoreGauge({ score }: { score: number }) {
-  const color = score >= 90 ? 'var(--color-success)' : score >= 70 ? 'var(--color-warning)' : 'var(--color-error)';
+  const color = score >= 85 ? 'var(--color-success)' : score >= 70 ? 'var(--color-warning)' : 'var(--color-error)';
   const circumference = 2 * Math.PI * 44;
   const offset = circumference - (score / 100) * circumference;
 
@@ -36,14 +36,14 @@ export default function QADashboard({ scorecard, loaded, running, actionSlot }: 
   const checks = scorecard?.checks ?? [];
   const passCount = checks.filter((c) => c.status === 'pass').length;
 
-  const bearFilter = score >= 90
+  const bearFilter = score >= 85
     ? 'hue-rotate(80deg) brightness(1.2)'
     : score < 70
       ? 'saturate(2)'
       : undefined;
 
   return (
-    <div className="glass rounded-2xl p-8 text-center relative overflow-hidden">
+    <div className="v2-surface rounded-2xl p-8 text-center relative overflow-hidden">
       {running
         ? <BearMark variant="pulse" />
         : <BearMark variant="watermark" opacity={0.05} className={bearFilter ? `[filter:${bearFilter}]` : ''} />
@@ -54,7 +54,7 @@ export default function QADashboard({ scorecard, loaded, running, actionSlot }: 
           <>
             <ScoreGauge score={score} />
             <p className="text-sm text-[var(--color-text-secondary)] mt-4">
-              {passCount}/{checks.length} checks passed — {score >= 90 ? 'Courtroom ready' : 'Needs revision'}
+              {passCount}/{checks.length} checks passed — {score >= 85 ? 'Courtroom ready' : score >= 70 ? 'Marginal — review flagged items' : 'Needs revision'}
               {scorecard.benchmarkMatch !== undefined && (
                 <span className="block text-xs text-[var(--color-text-muted)] mt-1">
                   Benchmark match: {scorecard.benchmarkMatch}/100

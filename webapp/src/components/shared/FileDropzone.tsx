@@ -23,6 +23,7 @@ interface FileDropzoneProps {
   accept?: string;
   hint?: string;
   onRemove?: (docId: string) => void;
+  showList?: boolean;
 }
 
 export default function FileDropzone({
@@ -32,6 +33,7 @@ export default function FileDropzone({
   accept = '.pdf,.docx,.doc,.txt,.png,.jpg,.jpeg',
   hint = 'Expert reports, depositions, photos',
   onRemove,
+  showList = true,
 }: FileDropzoneProps) {
   const [dragOver, setDragOver] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -76,7 +78,7 @@ export default function FileDropzone({
         {uploading && <Loader2 className="w-5 h-5 mx-auto mt-3 text-[var(--color-accent-primary)] animate-spin" />}
       </div>
 
-      {documents.length > 0 && (
+      {showList && documents.length > 0 && (
         <div className="mt-4 space-y-2">
           {documents.map((doc) => (
             <div
@@ -131,7 +133,7 @@ export default function FileDropzone({
         </div>
       )}
 
-      {previewIndex !== null && imageDocuments.length > 0 && (
+      {showList && previewIndex !== null && imageDocuments.length > 0 && (
         <ImagePreviewModal
           images={imageDocuments}
           initialIndex={previewIndex}

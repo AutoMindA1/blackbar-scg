@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { FileText, Image, X, Eye } from 'lucide-react';
 import Header from '../components/layout/Header';
 import StageNavV2 from '../components/shared/StageNavV2';
 import AgentActivityFeedV2 from '../components/shared/AgentActivityFeedV2';
@@ -8,11 +9,84 @@ import HumanCheckpointV2 from '../components/shared/HumanCheckpointV2';
 import ContextualActionButton from '../components/shared/ContextualActionButton';
 import SkeletonLoader from '../components/shared/SkeletonLoader';
 import FileDropzone from '../components/shared/FileDropzone';
+import ImagePreviewModal from '../components/shared/ImagePreviewModal';
 import NoteList from '../components/shared/NoteList';
 import CaseForm from '../components/shared/CaseForm';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
 import { api, parseIntakeFromMetadata } from '../lib/api';
+import type { Doc } from '../lib/api';
+
+const IMAGE_EXTS = /\.(png|jpg|jpeg|gif|webp|bmp|tiff?)$/i;
+function isImageDoc(doc: Doc): boolean { return IMAGE_EXTS.test(doc.filename); }
+
+function DocRow({ doc, onRemove }: { doc: Doc; onRemove?: (id: string) => void }) {
+  return (
+    <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-[var(--noir-2)] group">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <FileText size={14} className="shrink-0" style={{ color: 'var(--signal-amber)' }} />
+        <div className="min-w-0">
+          <span className="text-xs text-[var(--color-text-primary)] font-medium truncate block">{doc.filename}</span>
+          <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+            {doc.pageCount ?? '?'} pages · {doc.sizeBytes ? `${(doc.sizeBytes / 1024).toFixed(0)}KB` : ''}
+          </span>
+        </div>
+      </div>
+      {onRemove && (
+        <button
+          onClick={() => onRemove(doc.id)}
+          className="opacity-0 group-hover:opacity-100 p-1 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)] rounded"
+          aria-label={`Remove ${doc.filename}`}
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PhotoGrid({ photos, onPreview, onRemove }: {
+  photos: Doc[];
+  onPreview: (index: number) => void;
+  onRemove?: (id: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+      {photos.map((photo, i) => (
+        <div key={photo.id} className="relative group rounded-lg overflow-hidden aspect-square bg-[var(--noir-2)]">
+          <img
+            src={`/uploads/${photo.filepath.split('/').pop()}`}
+            alt={photo.filename}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50">
+            <button
+              onClick={() => onPreview(i)}
+              className="p-1.5 rounded-full bg-[var(--noir-2)] text-[var(--color-text-primary)] hover:bg-[var(--noir-3)] focus:outline-none focus:ring-2 focus:ring-[var(--signal-amber)]"
+              aria-label={`Preview ${photo.filename}`}
+            >
+              <Eye size={14} />
+            </button>
+            {onRemove && (
+              <button
+                onClick={() => onRemove(photo.id)}
+                className="p-1.5 rounded-full bg-[var(--noir-2)] text-[var(--color-text-muted)] hover:text-[var(--color-error)] hover:bg-[var(--noir-2)] focus:outline-none focus:ring-2 focus:ring-[var(--color-error)]"
+                aria-label={`Remove ${photo.filename}`}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          {!photo.extractedText && (
+            <span className="absolute top-1 left-1 text-[8px] font-mono px-1 py-0.5 rounded" style={{ backgroundColor: 'rgba(255,107,53,0.85)', color: '#fff' }}>
+              BLIND
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function CaseIntake() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +95,7 @@ export default function CaseIntake() {
   const { logs, status, connectSSE, disconnectSSE, triggerAgent, clearLogs } = useAgentStore();
   const [uploading, setUploading] = useState(false);
   const [showCheckpoint, setShowCheckpoint] = useState(false);
+  const [previewPhotoIndex, setPreviewPhotoIndex] = useState<number | null>(null);
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
   useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
@@ -63,12 +138,10 @@ export default function CaseIntake() {
 
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
 
-  // Derive completed stages from current stage
   const stageOrder = ['intake', 'research', 'drafting', 'qa', 'export'];
   const currentIdx = stageOrder.indexOf(activeCase?.stage || 'intake');
   const completedStages = stageOrder.slice(0, currentIdx);
 
-  // Build findings for checkpoint from logs
   const findings = logs
     .filter(l => l.type === 'finding')
     .map((l, i) => ({
@@ -78,15 +151,11 @@ export default function CaseIntake() {
       attackPattern: l.metadata?.attackPattern as string | undefined,
     }));
 
-  // Pull the typed IntakeResult off the latest `complete` SSE event. Falls
-  // back to null if the agent didn't emit a parseable JSON block — the
-  // checkpoint summary handles that case gracefully.
   const intakeResult = useMemo(() => {
     const completeLog = [...logs].reverse().find((l) => l.type === 'complete');
     return parseIntakeFromMetadata(completeLog?.metadata);
   }, [logs]);
 
-  // Source of truth for note count is the DB, not the agent's self-reported noteCount.
   const { data: notesData } = useQuery({
     queryKey: ['notes', id],
     queryFn: () => api.getNotes(id!),
@@ -111,11 +180,30 @@ export default function CaseIntake() {
 
   if (!activeCase) return <div className="p-6"><SkeletonLoader type="card" count={3} /></div>;
 
+  const textDocs = activeCase.documents.filter(d => !isImageDoc(d));
+  const photoDocs = activeCase.documents.filter(d => isImageDoc(d));
+
+  const cardStyle: React.CSSProperties = {
+    background: 'var(--noir-1)',
+    border: '1px solid var(--noir-3)',
+    borderRadius: '16px',
+    padding: '24px',
+  };
+
+  const sectionLabel: React.CSSProperties = {
+    fontSize: '10px',
+    fontFamily: 'var(--font-mono)',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--color-text-muted)',
+    marginBottom: '12px',
+  };
+
   return (
     <div className="page-enter">
       <Header
         title={activeCase.name}
-        subtitle={`${activeCase.reportType || 'Initial'} Report \u2014 ${activeCase.jurisdiction || 'Clark County'}`}
+        subtitle={`${activeCase.reportType || 'Initial'} Report — ${activeCase.jurisdiction || 'Clark County'}`}
       />
       <StageNavV2
         currentStage={(activeCase.stage || 'intake') as 'intake' | 'research' | 'drafting' | 'qa' | 'export'}
@@ -125,26 +213,67 @@ export default function CaseIntake() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        {/* Left — Upload + Action (Steps 1 & 2) */}
+        {/* Left — Capture surface (three stacked cards) + action */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Case Materials: documents + notes */}
-          <div className="glass rounded-2xl p-6">
-            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Step 1: Case Materials</h3>
+
+          {/* Unified intake dropzone */}
+          <div style={cardStyle}>
+            <p style={sectionLabel}>Add Case Materials</p>
             <FileDropzone
               documents={activeCase.documents}
               uploading={uploading}
               onFiles={handleFiles}
-              hint="Expert reports, depositions, photos · PDF page counts auto-extracted"
+              hint="Drop PDFs, DOCX, photos — all file types accepted"
+              showList={false}
             />
-            <div style={{ marginTop: 'var(--space-5)', paddingTop: 'var(--space-5)', borderTop: '1px solid var(--noir-3)' }}>
-              <p className="v2-micro" style={{ marginBottom: 'var(--space-3)' }}>Notes</p>
-              <NoteList caseId={id!} />
+          </div>
+
+          {/* Documents card */}
+          <div style={cardStyle}>
+            <div className="flex items-center gap-2 mb-3">
+              <FileText size={14} style={{ color: 'var(--signal-amber)' }} />
+              <p style={{ ...sectionLabel, marginBottom: 0 }}>
+                Documents
+              </p>
+              <span className="ml-auto text-[10px] font-mono text-[var(--color-text-muted)]">{textDocs.length}</span>
             </div>
+            {textDocs.length === 0 ? (
+              <p className="text-xs text-[var(--color-text-muted)] py-3">No documents uploaded yet.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {textDocs.map(doc => <DocRow key={doc.id} doc={doc} />)}
+              </div>
+            )}
+          </div>
+
+          {/* Photos card */}
+          <div style={cardStyle}>
+            <div className="flex items-center gap-2 mb-3">
+              <Image size={14} style={{ color: 'var(--signal-amber)' }} />
+              <p style={{ marginBottom: 0, ...sectionLabel }}>
+                Photos
+              </p>
+              <span className="ml-auto text-[10px] font-mono text-[var(--color-text-muted)]">{photoDocs.length}</span>
+            </div>
+            {photoDocs.length === 0 ? (
+              <p className="text-xs text-[var(--color-text-muted)] py-3">No photos uploaded yet.</p>
+            ) : (
+              <PhotoGrid
+                photos={photoDocs}
+                onPreview={(i) => setPreviewPhotoIndex(i)}
+              />
+            )}
+          </div>
+
+          {/* Notes card */}
+          <div style={cardStyle}>
+            <p style={sectionLabel}>Notes</p>
+            <NoteList caseId={id!} />
           </div>
 
           {/* Step 2: Run Analysis */}
-          <div className="glass rounded-2xl p-6">
-            <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">Step 2: Run Analysis</h3>
+          <div style={cardStyle}>
+            <p style={sectionLabel}>Run Analysis</p>
             <ContextualActionButton
               stage="intake"
               status={status}
@@ -166,11 +295,20 @@ export default function CaseIntake() {
             }}
             onSave={handleSaveDetails}
           />
-
-          {/* Agent Activity */}
           <AgentActivityFeedV2 logs={logs} stage="intake" status={status} />
         </div>
       </div>
+
+      {/* Photo preview modal */}
+      {previewPhotoIndex !== null && photoDocs.length > 0 && (
+        <ImagePreviewModal
+          images={photoDocs}
+          initialIndex={previewPhotoIndex}
+          currentIndex={previewPhotoIndex}
+          onNavigate={setPreviewPhotoIndex}
+          onClose={() => setPreviewPhotoIndex(null)}
+        />
+      )}
 
       {/* Human Checkpoint */}
       {showCheckpoint && (
@@ -178,6 +316,7 @@ export default function CaseIntake() {
           stage="intake"
           summary={checkpointSummary}
           findings={findings}
+          documentCount={activeCase.documents.length}
           onApprove={handleApprove}
           onRevise={handleRevise}
           onReject={() => setShowCheckpoint(false)}
