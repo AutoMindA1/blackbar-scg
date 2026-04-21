@@ -31,6 +31,7 @@ model Case {
   createdBy      String      @map("created_by")
   creator        User        @relation(fields: [createdBy], references: [id])
   documents      Document[]
+  notes          Note[]
   agentLogs      AgentLog[]
   report         Report?
   createdAt      DateTime    @default(now()) @map("created_at")
@@ -50,6 +51,18 @@ model Document {
   uploadedAt DateTime @default(now()) @map("uploaded_at")
 
   @@map("documents")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  caseId    String   @map("case_id")
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([caseId])
+  @@map("notes")
 }
 
 model AgentLog {

@@ -51,13 +51,14 @@ export interface AgentResult {
 
 type BroadcastFn = (caseId: string, data: AgentBroadcast) => void;
 
-// Build user prompt from case data and documents
+// Build user prompt from case data, documents, and optional notes context
 function buildUserPrompt(
   stage: string,
   caseData: { name: string; caseType: string | null; reportType: string | null; jurisdiction: string | null; opposingExpert: string | null },
   documents: { filename: string; pageCount: number | null; sizeBytes: number | null }[],
   feedback?: string,
   previousStageOutput?: string,
+  notes?: string,
 ): string {
   const parts: string[] = [];
 
@@ -72,6 +73,10 @@ function buildUserPrompt(
     for (const doc of documents) {
       parts.push(`- ${doc.filename} (${doc.pageCount ?? '?'} pages, ${doc.sizeBytes ? Math.round(doc.sizeBytes / 1024) + 'KB' : 'unknown size'})`);
     }
+  }
+
+  if (notes) {
+    parts.push(`\n${notes}`);
   }
 
   if (previousStageOutput) {
@@ -228,6 +233,25 @@ export async function runAgent(
 
     broadcast(broadcastFn, caseId, stage, 'progress', `Case loaded: ${caseData.name} — ${caseData.documents.length} documents`);
 
+    // Load case notes for Intake (scoped to intake only — downstream stages receive
+    // note-derived observations only if the intake agent phrased them as findings
+    // matching the streaming keyword heuristic; raw note body does not propagate)
+    let notesContext: string | undefined;
+    if (stage === 'intake') {
+      const caseNotes = await prisma.note.findMany({
+        where: { caseId },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      });
+      if (caseNotes.length > 0) {
+        const lines = caseNotes.map((n, i) =>
+          `Note ${i + 1} (${n.createdAt.toISOString().slice(0, 10)}): ${n.body}`
+        );
+        notesContext = `## Case Notes (${caseNotes.length} total)\nReview these alongside uploaded documents. Flag any contradictions or additional context relevant to case classification.\n${lines.join('\n')}`;
+        broadcast(broadcastFn, caseId, stage, 'progress', `${caseNotes.length} case note${caseNotes.length === 1 ? '' : 's'} loaded`);
+      }
+    }
+
     // Build prompts
     const systemPrompt = buildSystemPrompt(stage);
     const previousOutput = await getPreviousStageOutput(caseId, stage);
@@ -237,6 +261,7 @@ export async function runAgent(
       caseData.documents,
       feedback,
       previousOutput,
+      notesContext,
     );
 
     broadcast(broadcastFn, caseId, stage, 'progress', `System prompt built (${Math.round(systemPrompt.length / 1000)}K chars) — calling Claude...`);

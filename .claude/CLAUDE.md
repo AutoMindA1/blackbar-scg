@@ -9,7 +9,7 @@ Bear mascot. Accent: #FF6B35. 4 agents · real Anthropic SDK calls · typed JSON
 
 - **Frontend:** Vite + React + TypeScript
 - **Backend:** Express + Prisma + PostgreSQL
-- **Structure:** `webapp/` is deployable root (8 pages, 14 endpoints)
+- **Structure:** `webapp/` is deployable root (8 pages, 17 endpoints)
 - **Benchmark cases:** Gleason (trip_fall, Initial), Heagy (Peterson adversary, Rebuttal), Anderson (ANSI A326.3, Supplemental)
 
 ## Auth
@@ -52,7 +52,7 @@ Next steps:
 
 - [x] Merge code adoption tables into ENTERPRISE_BRAIN.md Section 8 (done 2026-04-12 — adoption process, jurisdiction matrix, ADA enforcement architecture, reference file index)
 - [x] Replace mocked SSE agents with real agent pipeline (done — 4 agents live via Anthropic SDK with typed JSON contracts)
-- [ ] PR 1 — Notes as first-class capture (schema + route + NoteList + Intake agent integration)
+- [x] PR 1 — Notes as first-class capture (schema + route + NoteList + Intake agent integration)
 - [ ] PR 2 — Image preview modal with `[AGENT BLIND]` flag
 - [ ] PR 3 — Image content reasoning (OCR / Claude vision) — removes `[AGENT BLIND]`
 - [ ] PR 4 — Unified capture surface (Dannaway pass on CaseIntake)
