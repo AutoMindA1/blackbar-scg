@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -13,7 +13,7 @@ async function main() {
       name: 'Lane Swainston',
       email: 'lane@swainston.com',
       passwordHash: await bcrypt.hash('savage-wins-2026', 12),
-      role: 'admin',
+      role: UserRole.expert,
     },
   });
 
@@ -25,7 +25,7 @@ async function main() {
       name: 'Mariz Arellano',
       email: 'mariz@swainston.com',
       passwordHash: await bcrypt.hash('scg-mariz-2026', 12),
-      role: 'consultant',
+      role: UserRole.expert,
     },
   });
 

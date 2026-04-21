@@ -7,12 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  operator
+  expert
+  admin
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String
   email        String   @unique
   passwordHash String   @map("password_hash")
-  role         String   @default("operator")
+  role         UserRole @default(operator)
   cases        Case[]
   createdAt    DateTime @default(now()) @map("created_at")
 

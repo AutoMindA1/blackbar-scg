@@ -9,7 +9,7 @@
  * Run:  npm run db:seed   (from webapp/)
  * Reset and re-seed: npm run db:migrate:reset
  */
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -34,7 +34,7 @@ async function upsertUser(opts: {
   email: string;
   legacyEmail?: string;
   name: string;
-  role: string;
+  role: UserRole;
   passwordHash: string;
 }) {
   // Migrate any legacy-email user to the canonical email so we don't end up
@@ -86,7 +86,7 @@ async function main() {
     email: 'lane@swainstonconsulting.com',
     legacyEmail: 'lane@swainston.com',
     name: 'Lane Swainston',
-    role: 'admin',
+    role: UserRole.expert,
     passwordHash: laneHash,
   });
 
@@ -94,7 +94,7 @@ async function main() {
     email: 'mariz@swainstonconsulting.com',
     legacyEmail: 'mariz@swainston.com',
     name: 'Mariz Arellano',
-    role: 'consultant',
+    role: UserRole.expert,
     passwordHash: marizHash,
   });
 

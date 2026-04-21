@@ -17,7 +17,7 @@ export default function CaseExport() {
   const { activeCase, fetchCase } = useCaseStore();
   const [reportContent, setReportContent] = useState('');
   const [version, setVersion] = useState(1);
-  const [downloadFlash, setDownloadFlash] = useState(false);
+  const [downloadFlash] = useState(false); // reserved — bear glow retired (static only in export)
   const [exporting, setExporting] = useState<null | 'pdf' | 'docx'>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -42,8 +42,7 @@ export default function CaseExport() {
       a.download = `${activeCase.name.replace(/[^a-zA-Z0-9]/g, '_')}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
-      setDownloadFlash(true);
-      setTimeout(() => setDownloadFlash(false), 1000);
+      void downloadFlash; // bear glow retired
     } catch (err) {
       setExportError(err instanceof Error ? err.message : `${format.toUpperCase()} export failed`);
     } finally {
@@ -65,9 +64,6 @@ export default function CaseExport() {
     a.click();
     URL.revokeObjectURL(url);
 
-    // Bear eyes flash
-    setDownloadFlash(true);
-    setTimeout(() => setDownloadFlash(false), 1000);
   };
 
   const stageOrder = ['intake', 'research', 'drafting', 'qa', 'export'];
@@ -92,7 +88,7 @@ export default function CaseExport() {
         {/* Report preview */}
         <div className="lg:col-span-2">
           <div className="glass rounded-2xl overflow-hidden relative">
-            {downloadFlash ? <BearMark variant="glow" /> : <BearMark variant="watermark" opacity={0.04} />}
+            <BearMark variant="watermark" opacity={0.04} />
             <div className="relative z-10">
               <div className="px-5 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -161,7 +157,7 @@ export default function CaseExport() {
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <Download className="w-4 h-4" />
               }
-              {exporting === 'pdf' ? 'Rendering PDF…' : 'Download PDF'}
+              {exporting === 'pdf' ? 'Rendering PDF…' : 'Save Report as PDF'}
             </button>
             <button
               onClick={() => handleDownloadBinary('docx')}
@@ -172,14 +168,14 @@ export default function CaseExport() {
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <Download className="w-4 h-4" />
               }
-              {exporting === 'docx' ? 'Rendering DOCX…' : 'Download DOCX'}
+              {exporting === 'docx' ? 'Rendering DOCX…' : 'Save Report as DOCX'}
             </button>
             <button
               onClick={handleDownloadHTML}
               disabled={!reportContent}
               className="w-full flex items-center justify-center gap-2 bg-transparent border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] py-2 rounded-xl text-xs transition-colors disabled:opacity-50"
             >
-              <Download className="w-3 h-3" /> Download HTML
+              <Download className="w-3 h-3" /> Save Report as HTML
             </button>
             {exportError && (
               <p className="text-[10px] text-[var(--color-error)] text-center">{exportError}</p>
