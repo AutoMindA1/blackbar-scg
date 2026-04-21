@@ -6,6 +6,7 @@ interface DocLike {
   id: string;
   filename: string;
   filepath?: string;
+  extractedText?: string | null;
   sizeBytes: number | null;
   pageCount: number | null;
 }
@@ -38,7 +39,7 @@ export default function FileDropzone({
 
   const imageDocuments = documents.filter(
     (d): d is DocLike & { filepath: string } => isImageFile(d.filename) && !!d.filepath,
-  );
+  ) as Array<DocLike & { filepath: string }>;
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();

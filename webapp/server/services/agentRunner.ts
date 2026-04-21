@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { prisma } from '../db.js';
 import { buildSystemPrompt, getBrainQueries } from './promptLoader.js';
+import { extractImageText, isImagePath } from './imageOCR.js';
 import {
   AgentResult as TypedAgentResult,
   FALLBACKS,
@@ -59,6 +60,7 @@ function buildUserPrompt(
   feedback?: string,
   previousStageOutput?: string,
   notes?: string,
+  imageExtracts?: { filename: string; text: string }[],
 ): string {
   const parts: string[] = [];
 
@@ -77,6 +79,14 @@ function buildUserPrompt(
 
   if (notes) {
     parts.push(`\n${notes}`);
+  }
+
+  if (imageExtracts && imageExtracts.length > 0) {
+    parts.push('\n## Image Content (OCR — Claude vision extract)');
+    parts.push('The following text was extracted from uploaded photographs. Cross-reference with documents and flag contradictions as findings.');
+    for (const img of imageExtracts) {
+      parts.push(`\n### ${img.filename}\n${img.text}`);
+    }
   }
 
   if (previousStageOutput) {
@@ -252,6 +262,30 @@ export async function runAgent(
       }
     }
 
+    // For Intake: run Claude vision OCR on image documents that haven't been extracted yet
+    let imageExtracts: { filename: string; text: string }[] | undefined;
+    if (stage === 'intake') {
+      const imageDocs = caseData.documents.filter(
+        (d) => isImagePath(d.filepath) && !d.extractedText,
+      );
+      if (imageDocs.length > 0) {
+        broadcast(broadcastFn, caseId, stage, 'progress', `Running OCR on ${imageDocs.length} image${imageDocs.length === 1 ? '' : 's'}...`);
+        const ocResults = await Promise.all(
+          imageDocs.map(async (d) => {
+            const text = await extractImageText(d.filepath);
+            if (text) {
+              await prisma.document.update({ where: { id: d.id }, data: { extractedText: text } });
+            }
+            return text ? { filename: d.filename, text } : null;
+          }),
+        );
+        imageExtracts = ocResults.filter((r): r is { filename: string; text: string } => r !== null);
+        if (imageExtracts.length > 0) {
+          broadcast(broadcastFn, caseId, stage, 'finding', `Image OCR complete — extracted text from ${imageExtracts.length} image${imageExtracts.length === 1 ? '' : 's'}`);
+        }
+      }
+    }
+
     // Build prompts
     const systemPrompt = buildSystemPrompt(stage);
     const previousOutput = await getPreviousStageOutput(caseId, stage);
@@ -262,6 +296,7 @@ export async function runAgent(
       feedback,
       previousOutput,
       notesContext,
+      imageExtracts,
     );
 
     broadcast(broadcastFn, caseId, stage, 'progress', `System prompt built (${Math.round(systemPrompt.length / 1000)}K chars) — calling Claude...`);
