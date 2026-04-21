@@ -40,25 +40,33 @@ webapp/src/styles/MIGRATION.md           — v1 → v2 token migration map
 
 ## Deploy
 
-Railway project: "airy-creativity". Postgres: **online**. Webapp: **NOT deployed**.
+Railway project: "airy-creativity". Postgres: **online**. Webapp: **PRs open — pending merge + smoke test**.
 
-Next steps:
-1. Connect GitHub repo as new Railway service
-2. Set root directory to `webapp`
-3. Add env vars: `DATABASE_URL` (internal), `JWT_SECRET`, `PORT`
-4. Generate public domain
+Build: `cd webapp && npm install && npx prisma generate && npm run build`
+Start: `cd webapp && npx prisma migrate deploy && node dist/server/index.js`
+
+Pending before going live:
+- Run `prisma migrate resolve --applied 20260417190000_add_agent_log_feedback` against Railway DB (see DATABASE.md)
+- Verify ALLOWED_ORIGINS includes production domain in Railway env vars
+- Full smoke test on production URL
+
+## Completed Work (sprint 2026-04-20)
+
+- [x] Notes as first-class capture (Note model, CRUD routes, NoteList, Intake agent integration)
+- [x] Image preview modal (keyboard nav, right-rail OCR text panel, [AGENT BLIND] pill)
+- [x] Image OCR pipeline (Claude haiku vision, extractedText column, [AGENT BLIND] cleared after Intake)
+- [x] Unified capture surface (three stacked v2-surface cards: Documents / Photos / Notes)
+- [x] Layer 2 voice conformance in QA pipeline (scripts/voice_check.sh, scorecard check appended)
+- [x] Railway production hardening (X-Accel-Buffering: no, DATABASE.md drift fix documented)
+- [x] Design System v2 migration (signal-amber, noir-1/2/3, v2-surface; dead v1 components removed)
+- [x] UserRole enum (operator/expert/admin; Lane + Mariz = expert)
 
 ## Pending Work
 
-- [x] Merge code adoption tables into ENTERPRISE_BRAIN.md Section 8 (done 2026-04-12 — adoption process, jurisdiction matrix, ADA enforcement architecture, reference file index)
-- [x] Replace mocked SSE agents with real agent pipeline (done — 4 agents live via Anthropic SDK with typed JSON contracts)
-- [x] PR 1 — Notes as first-class capture (schema + route + NoteList + Intake agent integration)
-- [ ] PR 2 — Image preview modal with `[AGENT BLIND]` flag
-- [ ] PR 3 — Image content reasoning (OCR / Claude vision) — removes `[AGENT BLIND]`
-- [ ] PR 4 — Unified capture surface (Dannaway pass on CaseIntake)
-- [ ] PR 5 — Deploy webapp to Railway
-- [ ] Package AISDLC Product Architect as `.skill` file
-- [ ] Migrate components v1 → v2 tokens per `webapp/src/styles/MIGRATION.md`
+- [ ] Merge open PRs (#6, #7, #8, #9) to main
+- [ ] Run Railway smoke test (see STATE.md)
+- [ ] Golden Blessing ceremony (requires Cases/ benchmark PDFs — privileged, local only)
+- [ ] VOICE.md Phase 6 amendments [VOICE GUARD] — awaiting Caleb approval
 
 ## Rules
 
