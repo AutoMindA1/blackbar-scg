@@ -9,7 +9,7 @@
  * Run:  npm run db:seed   (from webapp/)
  * Reset and re-seed: npm run db:migrate:reset
  */
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -32,30 +32,10 @@ function passwordOrThrow(envVar: string, label: string): string {
 
 async function upsertUser(opts: {
   email: string;
-  legacyEmail?: string;
   name: string;
-  role: string;
+  role: UserRole;
   passwordHash: string;
 }) {
-  // Migrate any legacy-email user to the canonical email so we don't end up
-  // with two rows after the spec change. One-time housekeeping; safe to leave in.
-  if (opts.legacyEmail) {
-    const legacy = await prisma.user.findUnique({ where: { email: opts.legacyEmail } });
-    if (legacy) {
-      await prisma.user.update({
-        where: { id: legacy.id },
-        data: {
-          email: opts.email,
-          name: opts.name,
-          role: opts.role,
-          passwordHash: opts.passwordHash,
-        },
-      });
-      console.log(`✓ migrated ${opts.legacyEmail} → ${opts.email} (${opts.role})`);
-      return;
-    }
-  }
-
   await prisma.user.upsert({
     where: { email: opts.email },
     update: {
@@ -83,18 +63,16 @@ async function main() {
   ]);
 
   await upsertUser({
-    email: 'lane@swainstonconsulting.com',
-    legacyEmail: 'lane@swainston.com',
+    email: 'lane@swainston.com',
     name: 'Lane Swainston',
-    role: 'admin',
+    role: UserRole.expert,
     passwordHash: laneHash,
   });
 
   await upsertUser({
-    email: 'mariz@swainstonconsulting.com',
-    legacyEmail: 'mariz@swainston.com',
+    email: 'mariz@swainston.com',
     name: 'Mariz Arellano',
-    role: 'consultant',
+    role: UserRole.expert,
     passwordHash: marizHash,
   });
 

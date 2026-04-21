@@ -15,7 +15,7 @@ Bear mascot. Accent: #FF6B35. 4 agents · real Anthropic SDK calls · typed JSON
 ## Auth
 
 ```
-lane@swainstonconsulting.com / savage-wins-2026
+lane@swainston.com / savage-wins-2026
 ```
 
 ## Key Files
