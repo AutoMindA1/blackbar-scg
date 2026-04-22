@@ -7,12 +7,13 @@ interface StageNavV2Props {
   onNavigate: (stage: string) => void;
 }
 
+// v2: stage identity is position + pill status — no per-stage color tokens
 const stages = [
-  { key: 'intake', label: 'Intake', color: 'var(--color-stage-intake)' },
-  { key: 'research', label: 'Research', color: 'var(--color-stage-research)' },
-  { key: 'drafting', label: 'Drafting', color: 'var(--color-stage-drafting)' },
-  { key: 'qa', label: 'QA', color: 'var(--color-stage-qa)' },
-  { key: 'export', label: 'Export', color: 'var(--color-stage-export)' },
+  { key: 'intake', label: 'Intake' },
+  { key: 'research', label: 'Research' },
+  { key: 'drafting', label: 'Drafting' },
+  { key: 'qa', label: 'QA' },
+  { key: 'export', label: 'Export' },
 ] as const;
 
 export default function StageNavV2({ currentStage, completedStages, agentRunning, onNavigate }: StageNavV2Props) {
@@ -52,24 +53,26 @@ export default function StageNavV2({ currentStage, completedStages, agentRunning
                 {isComplete ? (
                   <span
                     className="flex items-center justify-center w-5 h-5 rounded-full"
-                    style={{ backgroundColor: stage.color }}
+                    style={{ backgroundColor: 'var(--signal-amber, #FF6B35)' }}
                   >
                     <Check size={12} className="text-[var(--color-bg-primary)]" strokeWidth={3} />
                   </span>
                 ) : stage.key === 'qa' ? (
                   <span
                     className={`flex items-center justify-center w-5 h-5 rounded-full ${isRunning ? 'stage-pulse-ring' : ''}`}
-                    style={{ color: stage.color, backgroundColor: isCurrent ? `${stage.color}22` : 'transparent' }}
+                    style={{
+                      color: isCurrent ? 'var(--signal-amber, #FF6B35)' : 'var(--color-text-muted)',
+                      backgroundColor: isCurrent ? 'rgba(255,107,53,0.12)' : 'transparent',
+                    }}
                   >
-                    <Scale size={12} style={{ color: stage.color }} />
+                    <Scale size={12} />
                   </span>
                 ) : (
                   <span
                     className={`block w-3 h-3 rounded-full border-2 ${isRunning ? 'stage-pulse-ring' : ''}`}
                     style={{
-                      borderColor: stage.color,
-                      backgroundColor: isCurrent ? stage.color : 'transparent',
-                      color: stage.color,
+                      borderColor: isCurrent ? 'var(--signal-amber, #FF6B35)' : 'var(--color-border)',
+                      backgroundColor: isCurrent ? 'var(--signal-amber, #FF6B35)' : 'transparent',
                     }}
                   />
                 )}
@@ -80,8 +83,8 @@ export default function StageNavV2({ currentStage, completedStages, agentRunning
             {/* Connector line */}
             {i < stages.length - 1 && (
               <div className="w-8 h-px mx-1" style={{
-                backgroundColor: isComplete ? stage.color : 'var(--color-border)',
-                opacity: isComplete ? 0.6 : 0.3,
+                backgroundColor: isComplete ? 'var(--signal-amber, #FF6B35)' : 'var(--color-border)',
+                opacity: isComplete ? 0.5 : 0.3,
               }} />
             )}
           </div>

@@ -114,7 +114,7 @@ export interface Note {
 }
 
 export interface Doc {
-  id: string; filename: string; filepath: string; sizeBytes: number | null; pageCount: number | null; uploadedAt: string;
+  id: string; filename: string; filepath: string; sizeBytes: number | null; pageCount: number | null; extractedText: string | null; uploadedAt: string;
 }
 
 export interface AgentLog {

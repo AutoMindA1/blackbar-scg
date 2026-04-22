@@ -109,13 +109,14 @@ export default function AgentActivityFeedV2({ logs, status }: AgentActivityFeedV
             key={i}
             className={`flex items-start gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${
               log.type === 'finding'
-                ? 'bg-[var(--color-info)]/8 border border-[var(--color-info)]/15'
+                ? 'bg-[var(--signal-amber-soft)] border border-[var(--signal-amber-border)]'
                 : log.type === 'complete'
                   ? 'bg-[var(--color-success)]/8 border border-[var(--color-success)]/15'
                   : log.type === 'error'
                     ? 'bg-[var(--color-error)]/8 border border-[var(--color-error)]/15'
                     : 'hover:bg-[var(--color-bg-elevated)]'
             }`}
+            style={log.type === 'finding' ? { borderLeft: '2px solid var(--signal-amber)' } : undefined}
           >
             <span className="mt-0.5 shrink-0">{getIcon(log.type)}</span>
             <span className="text-[var(--color-text-secondary)] leading-relaxed">
