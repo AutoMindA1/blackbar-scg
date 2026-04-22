@@ -109,6 +109,20 @@ Railway will keep restarting the container. Each restart re-runs `prisma migrate
    - **Option A (preferred):** fix the migration SQL locally, ship as a NEW migration (don't edit applied migrations). Mark the failed one as rolled-back via `npx prisma migrate resolve --rolled-back <migration_name>`.
    - **Option B (last resort, construction-mode only):** `npx prisma migrate resolve --applied <migration_name>` to mark it manually applied, then ship a corrective migration.
 
+### "Migration exists in _prisma_migrations but file is deleted locally."
+
+This happened with `20260417190000_add_agent_log_feedback` — the migration was applied to the Railway DB via `db push` early in construction, then a proper baseline (`0_init`) was generated that already included the `feedback` column. The spurious migration was deleted locally, but the Railway DB still has it in `_prisma_migrations`.
+
+**One-time fix (run from a machine with Railway DATABASE_URL):**
+
+```bash
+cd webapp
+# Mark the ghost migration as applied so Prisma stops complaining
+DATABASE_URL="<railway_url>" npx prisma migrate resolve --applied 20260417190000_add_agent_log_feedback
+```
+
+After running this, `prisma migrate deploy` will proceed cleanly on all future deploys.
+
 ### "Local schema and DB drifted (worked on it without a migration)."
 
 ```bash

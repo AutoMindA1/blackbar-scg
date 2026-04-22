@@ -79,6 +79,7 @@ router.get('/:id/agents/stream', (req: AuthRequest, res: Response) => {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no', // Disable nginx proxy buffering (Railway)
   });
   res.write(`data: ${JSON.stringify({ type: 'connected', message: 'SSE stream connected' })}\n\n`);
 

@@ -1,6 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { execFile } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { prisma } from '../db.js';
 import { buildSystemPrompt, getBrainQueries } from './promptLoader.js';
+import { extractImageText, isImagePath } from './imageOCR.js';
 import {
   AgentResult as TypedAgentResult,
   FALLBACKS,
@@ -59,6 +64,7 @@ function buildUserPrompt(
   feedback?: string,
   previousStageOutput?: string,
   notes?: string,
+  imageExtracts?: { filename: string; text: string }[],
 ): string {
   const parts: string[] = [];
 
@@ -77,6 +83,14 @@ function buildUserPrompt(
 
   if (notes) {
     parts.push(`\n${notes}`);
+  }
+
+  if (imageExtracts && imageExtracts.length > 0) {
+    parts.push('\n## Image Content (OCR — Claude vision extract)');
+    parts.push('The following text was extracted from uploaded photographs. Cross-reference with documents and flag contradictions as findings.');
+    for (const img of imageExtracts) {
+      parts.push(`\n### ${img.filename}\n${img.text}`);
+    }
   }
 
   if (previousStageOutput) {
@@ -212,6 +226,36 @@ function broadcast(broadcastFn: BroadcastFn, caseId: string, stage: string, type
   return entry;
 }
 
+// Run voice_check.sh against a draft string. Returns {pass, exitCode, summary}.
+// No-ops gracefully if the script is not found (production container).
+async function runVoiceCheck(draftContent: string): Promise<{ pass: boolean; exitCode: number; summary: string }> {
+  const repoRoot = path.resolve(process.cwd(), '..');
+  const scriptPath = path.join(repoRoot, 'scripts', 'voice_check.sh');
+  if (!fs.existsSync(scriptPath)) {
+    return { pass: true, exitCode: 0, summary: 'Voice check skipped — scripts not available in this environment' };
+  }
+
+  const tmpFile = path.join(os.tmpdir(), `voice-check-${Date.now()}.txt`);
+  fs.writeFileSync(tmpFile, draftContent, 'utf-8');
+
+  return new Promise((resolve) => {
+    execFile('bash', [scriptPath, tmpFile], { cwd: repoRoot, env: { ...process.env, VOICE_MD: path.join(repoRoot, 'VOICE.md') }, timeout: 30000 },
+      (err, stdout, stderr) => {
+        try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+        const exitCode = err?.code ?? 0;
+        const output = (stdout + stderr).trim();
+        if (exitCode === 2) {
+          resolve({ pass: false, exitCode: 2, summary: `[VOICE GUARD] §21 HARD BLOCK — ${output.split('\n')[0] ?? 'prohibited phrase detected'}` });
+        } else if (exitCode === 1) {
+          resolve({ pass: false, exitCode: 1, summary: `Voice violations detected — ${output.split('\n').filter(l => l.includes('VIOLATION') || l.includes('BLOCK')).join('; ') || 'see logs'}` });
+        } else {
+          resolve({ pass: true, exitCode: 0, summary: 'Voice conformance: PASS — all §11/§21 checks clear' });
+        }
+      }
+    );
+  });
+}
+
 export async function runAgent(
   caseId: string,
   stage: string,
@@ -252,6 +296,30 @@ export async function runAgent(
       }
     }
 
+    // For Intake: run Claude vision OCR on image documents that haven't been extracted yet
+    let imageExtracts: { filename: string; text: string }[] | undefined;
+    if (stage === 'intake') {
+      const imageDocs = caseData.documents.filter(
+        (d) => isImagePath(d.filepath) && !d.extractedText,
+      );
+      if (imageDocs.length > 0) {
+        broadcast(broadcastFn, caseId, stage, 'progress', `Running OCR on ${imageDocs.length} image${imageDocs.length === 1 ? '' : 's'}...`);
+        const ocResults = await Promise.all(
+          imageDocs.map(async (d) => {
+            const text = await extractImageText(d.filepath);
+            if (text) {
+              await prisma.document.update({ where: { id: d.id }, data: { extractedText: text } });
+            }
+            return text ? { filename: d.filename, text } : null;
+          }),
+        );
+        imageExtracts = ocResults.filter((r): r is { filename: string; text: string } => r !== null);
+        if (imageExtracts.length > 0) {
+          broadcast(broadcastFn, caseId, stage, 'finding', `Image OCR complete — extracted text from ${imageExtracts.length} image${imageExtracts.length === 1 ? '' : 's'}`);
+        }
+      }
+    }
+
     // Build prompts
     const systemPrompt = buildSystemPrompt(stage);
     const previousOutput = await getPreviousStageOutput(caseId, stage);
@@ -262,6 +330,7 @@ export async function runAgent(
       feedback,
       previousOutput,
       notesContext,
+      imageExtracts,
     );
 
     broadcast(broadcastFn, caseId, stage, 'progress', `System prompt built (${Math.round(systemPrompt.length / 1000)}K chars) — calling Claude...`);
@@ -326,6 +395,30 @@ export async function runAgent(
       qaScorecard = parseQAScorecard(fullResponse);
       if (qaScorecard) {
         console.log(`[agentRunner] QA scorecard parsed — score=${qaScorecard.score}, checks=${qaScorecard.checks.length}, issues=${qaScorecard.issues.length}`);
+
+        // Layer 2 voice conformance — run deterministic rule check against the current draft
+        const draftRecord = await prisma.report.findUnique({ where: { caseId } }).catch(() => null);
+        if (draftRecord?.content) {
+          broadcast(broadcastFn, caseId, stage, 'progress', 'Running Layer 2 voice conformance check…');
+          const voiceResult = await runVoiceCheck(draftRecord.content);
+          broadcast(broadcastFn, caseId, stage, voiceResult.pass ? 'finding' : 'finding',
+            voiceResult.summary,
+            { voiceCheck: true, exitCode: voiceResult.exitCode },
+          );
+          // Append voice conformance as a synthetic check in the scorecard
+          qaScorecard.checks.push({
+            name: 'Layer 2 Voice Conformance',
+            status: voiceResult.pass ? 'pass' : voiceResult.exitCode === 2 ? 'fail' : 'warning',
+            detail: voiceResult.summary,
+          });
+          if (!voiceResult.pass) {
+            qaScorecard.issues.push({
+              severity: voiceResult.exitCode === 2 ? 'critical' : 'warning',
+              description: voiceResult.summary,
+              location: 'Draft — voice conformance',
+            });
+          }
+        }
       } else {
         console.warn('[agentRunner] QA stage produced no parseable JSON scorecard. UI will show an empty state.');
       }
