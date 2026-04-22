@@ -7,12 +7,16 @@
 # Migrations are applied at START (not build) so the build env doesn't need
 # live DATABASE_URL; Railway provides it at runtime. `prisma migrate deploy`
 # is idempotent — safe on every restart.
+#
+# Defensive cd: works whether Railway's cwd is the repo root (/app) OR the
+# Root-Directory-overridden /app/webapp. If webapp/ exists below cwd we cd
+# into it; otherwise we assume we're already there.
 
 [build]
-buildCommand = "cd webapp && npm install && npx prisma generate && npm run build"
+buildCommand = "if [ -d webapp ]; then cd webapp; fi && npm install && npx prisma generate && npm run build"
 
 [deploy]
-startCommand = "cd webapp && npx prisma migrate deploy && node dist/server/index.js"
+startCommand = "if [ -d webapp ]; then cd webapp; fi && npx prisma migrate deploy && node dist/server/index.js"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
