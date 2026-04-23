@@ -23,5 +23,5 @@
     "verbatimModuleSyntax": false
   },
   "include": ["server/**/*.ts"],
-  "exclude": ["node_modules", "dist", "src", "**/*.deprecated"]
+  "exclude": ["node_modules", "dist", "src", "**/*.deprecated", "**/*.test.ts", "**/__tests__/**"]
 }

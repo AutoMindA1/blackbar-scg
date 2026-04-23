@@ -7,47 +7,92 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String   @id @default(uuid())
+model Organization {
+  id           String               @id @default(uuid())
   name         String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         String   @default("operator")
+  slug         String               @unique
+  entityType   String               @map("entity_type") // swainston_ai, tactical_resources, digital_imaging, client
+  billingEmail String?              @map("billing_email")
+  settings     Json?
+  active       Boolean              @default(true)
+  members      OrganizationMember[]
   cases        Case[]
-  createdAt    DateTime @default(now()) @map("created_at")
+  usageRecords UsageRecord[]
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id        String       @id @default(uuid())
+  orgId     String       @map("org_id")
+  org       Organization @relation(fields: [orgId], references: [id])
+  userId    String       @map("user_id")
+  user      User         @relation(fields: [userId], references: [id])
+  role      String       @default("member") // admin, member, viewer, billing
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@unique([orgId, userId])
+  @@map("organization_members")
+}
+
+model User {
+  id                  String               @id @default(uuid())
+  name                String
+  email               String               @unique
+  passwordHash        String               @map("password_hash")
+  role                String               @default("operator")
+  mfaSecret           String?              @map("mfa_secret")
+  mfaEnabled          Boolean              @default(false) @map("mfa_enabled")
+  lastLoginAt         DateTime?            @map("last_login_at")
+  failedLoginAttempts Int                  @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?            @map("locked_until")
+  cases               Case[]
+  memberships         OrganizationMember[]
+  refreshTokens       RefreshToken[]
+  createdAt           DateTime             @default(now()) @map("created_at")
 
   @@map("users")
 }
 
 model Case {
-  id             String      @id @default(uuid())
+  id             String        @id @default(uuid())
   name           String
-  caseType       String?     @map("case_type")
-  reportType     String?     @map("report_type")
+  caseType       String?       @map("case_type")
+  reportType     String?       @map("report_type")
   jurisdiction   String?
-  opposingExpert String?     @map("opposing_expert")
+  opposingExpert String?       @map("opposing_expert")
   deadline       DateTime?
-  stage          String      @default("intake")
-  createdBy      String      @map("created_by")
-  creator        User        @relation(fields: [createdBy], references: [id])
+  stage          String        @default("intake")
+  createdBy      String        @map("created_by")
+  creator        User          @relation(fields: [createdBy], references: [id])
+  orgId          String?       @map("org_id")
+  org            Organization? @relation(fields: [orgId], references: [id])
   documents      Document[]
   agentLogs      AgentLog[]
   report         Report?
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
+  usageRecords   UsageRecord[]
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
   @@map("cases")
 }
 
 model Document {
-  id         String   @id @default(uuid())
-  caseId     String   @map("case_id")
-  case       Case     @relation(fields: [caseId], references: [id])
-  filename   String
-  filepath   String
-  sizeBytes  Int?     @map("size_bytes")
-  pageCount  Int?     @map("page_count")
-  uploadedAt DateTime @default(now()) @map("uploaded_at")
+  id               String    @id @default(uuid())
+  caseId           String    @map("case_id")
+  case             Case      @relation(fields: [caseId], references: [id])
+  filename         String
+  filepath         String
+  sizeBytes        Int?      @map("size_bytes")
+  pageCount        Int?      @map("page_count")
+  content          String?
+  mimeType         String?   @map("mime_type")
+  extractionStatus String    @default("pending") @map("extraction_status") // pending, processing, ready, failed
+  extractedAt      DateTime? @map("extracted_at")
+  uploadedAt       DateTime  @default(now()) @map("uploaded_at")
 
   @@map("documents")
 }
@@ -76,4 +121,63 @@ model Report {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("reports")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String?  @map("user_id")
+  orgId        String?  @map("org_id")
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  metadata     Json?
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([action, createdAt])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+model UsageRecord {
+  id           String        @id @default(uuid())
+  orgId        String        @map("org_id")
+  org          Organization  @relation(fields: [orgId], references: [id])
+  caseId       String?       @map("case_id")
+  case         Case?         @relation(fields: [caseId], references: [id])
+  stage        String?
+  model        String
+  inputTokens  Int           @map("input_tokens")
+  outputTokens Int           @map("output_tokens")
+  costCents    Int           @map("cost_cents")
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  @@index([orgId, createdAt])
+  @@map("usage_records")
+}
+
+model PromptVersion {
+  id          String   @id @default(uuid())
+  name        String   // e.g. "voice", "brain", "intake_spec"
+  version     Int
+  contentHash String   @map("content_hash")
+  content     String
+  createdBy   String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([name, version])
+  @@map("prompt_versions")
 }
