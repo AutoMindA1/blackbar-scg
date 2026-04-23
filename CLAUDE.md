@@ -1,80 +1,92 @@
-# BLACK-BAR — Project Config
+# CLAUDE.md
 
-## Problem
-Forensic expert reports take too long to produce manually. BlackBar accelerates Lane Swainston's (father, forensic expert) report output using an AI-assisted pipeline that moves cases through 4 sequential stages — Intake → Research → Drafting → QA — with a single human checkpoint at the end before delivery.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Architecture
-Multi-agent pipeline webapp. Each stage has a dedicated AI agent spec. The webapp provides the UI for case management, document handling, and agent activity monitoring. Lane reviews the final QA output (one human checkpoint) before the report ships.
+## Project
 
-## Tech Stack
-- Frontend: React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4
-- Backend: Express 5 + TypeScript (tsx runtime)
-- ORM: Prisma 6.19 (PostgreSQL on Railway)
-- State: Zustand 5 + TanStack React Query 5
-- Auth: bcrypt + JWT
-- AI: Anthropic SDK 0.82
-- Deploy: Railway (railway.toml at project root)
-- All webapp code lives in `webapp/`
+BlackBar is an AI-assisted forensic expert report drafting system for Swainston Consulting Group (SCG). It moves cases through a 4-stage sequential pipeline — Intake, Research, Drafting, QA — with one human checkpoint (Lane's review) before delivery. All webapp code lives in `webapp/`.
 
-## Commands (run from webapp/)
+## Commands (run from `webapp/`)
+
 | Command | What it does |
 |---------|-------------|
-| `npm run dev` | Start Vite + Express concurrently |
-| `npm run build` | TypeScript compile + Vite build |
-| `npm run lint` | ESLint (flat config) |
+| `npm run dev` | Start Vite + Express concurrently (frontend :5173, API :3001) |
+| `npm run build` | `tsc -b` + `vite build` + `tsc -p tsconfig.server.json` |
+| `npm run lint` | ESLint flat config (TS + React hooks + React Refresh) |
 | `npm run db:generate` | Prisma generate client |
-| `npm run db:push` | Push schema to Railway PostgreSQL |
-| `npm run db:seed` | Seed database |
+| `npm run db:push` | Push schema to PostgreSQL |
+| `npm run db:seed` | Seed database via tsx |
+| `npm run start` | `node dist/server/index.js` (production only) |
 
-## Directory Navigation
-- `webapp/src/pages/` — Dashboard, CaseIntake, CaseResearch, CaseDrafting, CaseQA, CaseExport, Login
-- `webapp/src/components/shared/` — AgentActivityFeed, BearMark, HumanCheckpoint, SkeletonLoader, StageNav, EmptyState
-- `webapp/server/routes/` — API: auth, cases, documents, reports, agents
-- `webapp/server/services/` — Business logic
-- `webapp/prisma/schema.prisma` — DB schema
-- `agents/` — Pipeline specs (Intake → Research → Drafting → QA)
-- `Brand/` — Logo, "Forensic Noir" design philosophy
-- `Cases/` — Privileged (never commit without explicit request)
-- `reports/` — QA output from `.claude/skills/qa-pipeline/`
+No test suite exists yet. CI runs `tsc --noEmit` and `npm run build` as the quality gate.
 
-## Agent Pipeline
-Sequential: Intake → Research → Drafting → QA
-- Specs: `agents/{stage}/BlackBar-{Stage}.md`
-- Voice: `VOICE.md` | Domain: `ENTERPRISE_BRAIN.md`
-- QA skill: `.claude/skills/qa-pipeline/SKILL.md`
+## Architecture
 
-## Quick Reference
-- `QUICKFIND.md` — "I need X → go to Y" lookup
-- `DIRECTORY_MAP.md` — Full file inventory
-- `ARCHITECTURE_AUDIT_v1.1.md` — Current arch assessment
+### Build pipeline
+- **Frontend**: Vite builds to `webapp/dist/client/` (React 19 SPA)
+- **Server**: `tsc -p tsconfig.server.json` compiles to `webapp/dist/server/`
+- **Production**: Express serves the Vite build from `dist/client/` with SPA fallback. In dev, Vite on :5173 proxies `/api` to Express on :3001
+- **Railway**: `railway.toml` runs `cd webapp && npm install && npm run build` then `cd webapp && node dist/server/index.js`. Health check at `/api/health`
+
+### Server (`webapp/server/`)
+- `index.ts` — Express 5 app: helmet, CORS, 14 API endpoints mounted under `/api`
+- `routes/` — auth (login + me), cases (CRUD), documents (upload + list), agents (trigger + SSE stream + approve), reports (get + save + export)
+- `services/agentRunner.ts` — Streams Claude API responses via Anthropic SDK, parses structured JSON output per stage, broadcasts via SSE
+- `services/promptLoader.ts` — Loads `VOICE.md` + `ENTERPRISE_BRAIN.md` (from project root) + `agents/{stage}/BlackBar-{Stage}.md` specs, assembles system prompts with stage-specific brain sections and output contracts
+- `middleware/auth.ts` — JWT auth; supports Bearer header and query param (for EventSource/SSE)
+- `types/agentContracts.ts` — Per-stage typed output interfaces with validators and fallbacks
+- `db.ts` — Prisma client singleton
+
+### Frontend (`webapp/src/`)
+- `App.tsx` — React Router: `/login`, `/dashboard`, `/cases/:id/{intake,research,drafting,qa,export}`
+- `stores/` — Zustand: `authStore` (JWT in localStorage as `bb_token`), `caseStore` (CRUD), `agentStore` (SSE connection + agent trigger)
+- `lib/api.ts` — Typed fetch wrapper for all 14 endpoints + `createSSE()` for EventSource + typed result parsers (`parseIntakeFromMetadata`, `parseResearchFromMetadata`, `parseDraftingFromMetadata`)
+- `components/layout/` — AppShell, Header, Sidebar
+- `components/shared/` — AgentActivityFeed, DraftEditor (TipTap), FileDropzone, HumanCheckpoint, StageNav, QADashboard, FindingsGrid, CitationCard, etc.
+- `pages/` — Dashboard, CaseIntake, CaseResearch, CaseDrafting, CaseQA, CaseExport, Login, NotFound
+
+### Agent pipeline
+Sequential: Intake -> Research -> Drafting -> QA. Each stage:
+1. `promptLoader.ts` builds a system prompt from VOICE.md + relevant ENTERPRISE_BRAIN.md sections (mapped in `STAGE_BRAIN_REFS`) + the `agents/{stage}/BlackBar-{Stage}.md` spec (or hardcoded fallback)
+2. `agentRunner.ts` streams Claude's response, broadcasting SSE events (`progress`, `finding`, `complete`, `error`, `qa_result`)
+3. Agent must emit a trailing ```json block matching the stage's output contract (validated by `parseAgentOutput`)
+4. Previous stage output is passed as context to the next stage via `getPreviousStageOutput`
+
+### Data model (`webapp/prisma/schema.prisma`)
+User -> Case -> Document, AgentLog, Report. Cases track `stage` (intake/research/drafting/qa). AgentLog stores SSE events with JSON metadata. Report stores HTML content + sections.
+
+## Key reference files (project root)
+- `VOICE.md` — Lane's voice profile. Read-only during case runs. Never edit tone without approval.
+- `ENTERPRISE_BRAIN.md` — 15-section domain knowledge (codes, attack patterns, adversaries, instruments)
+- `PIPELINE.md` — Agent pipeline architecture spec
+- `agents/{stage}/BlackBar-{Stage}.md` — Per-stage agent playbooks
 - `BLACKBAR_UI_SPEC_v3.md` — Latest UI spec
+- `ARCHITECTURE_AUDIT_v1.1.md` — Current architecture assessment
 
 ## Environment
-- .env at project ROOT (not webapp/) — DATABASE_URL, JWT_SECRET, PORT
-- Railway reads railway.toml for build/deploy
-- Express on port 3001, Vite proxies /api
+- `.env` at **project root** (not webapp/) — `DATABASE_URL`, `JWT_SECRET`, `PORT`, `ANTHROPIC_API_KEY`
+- Optional: `ALLOWED_ORIGINS` (comma-separated, required in production), `SUPERVISED_MODE=true`, `VOICE_MD_PATH`, `BRAIN_MD_PATH`, `AGENT_SPECS_DIR`
+- Express defaults to port 3001; Vite dev server proxies `/api` to it
 
-## Do NOT
-- Use `grep -P` in scripts — macOS BSD grep, use `grep -E`
-- Assume Prisma version — it is 6.19, check package.json
-- cd into BLACK-BAR when user said Bloom Soft (or vice versa)
-- Create files in Cases/ or benchmarks/ without explicit request
+## CI
+- `.github/workflows/ci.yml` — On push to main/staging and PRs to main: `npm ci`, `tsc --noEmit`, `npm run build`, verify no `tsx` in start script, verify `railway.toml` uses compiled JS
+- `.github/workflows/pr-check.yml` — On PRs to main/staging: `npm ci`, `tsc --noEmit`
 
-## HARD RULES — DO NOT VIOLATE
-
-- **NEVER** use `tsx` in any `start` script or any production build command. Production runs compiled JS only: `node dist/server/index.js`.
-- **NEVER** change `webapp/package.json` `"start"` script to anything other than `node dist/server/index.js`.
-- **NEVER** add `tsx` as a production dependency. It belongs in `devDependencies` only and is permitted only in `dev`/`dev:server`/`db:seed` style scripts that exist for local development.
-- **Railway runs the `package.json` `start` script.** It must always be `node dist/server/index.js`. The `build` script is responsible for emitting the server JS to `dist/server/`. If you change one, audit the other.
-- Prowl is dormant. Do not wire prowl.ts, sentinel.ts, or pipelineMetrics.ts into production routes until runAgent returns AgentResult and acceptance-rate data exists from 20+ real cases.
-HEAD
-
-## Deploy Workflow
-- All development work pushes to `staging` branch first
+## Deploy workflow
+- All development pushes to `staging` first
 - Verify on staging URL before merging to main
-- Only `main` deploys to production (Lane's URL)
-- Command: git push origin staging → test → git checkout main && git merge staging → git push origin main
+- Only `main` deploys to production
 - NEVER push untested code directly to main
 
-- NEVER modify schema.prisma without creating a Prisma migration. Run `npx prisma migrate dev --name <description>` for every schema change.
-staging
+## Hard rules
+
+- **NEVER** use `tsx` in the `start` script or any production command. Production runs `node dist/server/index.js`.
+- **NEVER** change `webapp/package.json` `"start"` to anything other than `node dist/server/index.js`.
+- **NEVER** add `tsx` as a production dependency. It belongs in `devDependencies` only.
+- **NEVER** modify `schema.prisma` without creating a migration: `npx prisma migrate dev --name <description>`.
+- **NEVER** overwrite `ENTERPRISE_BRAIN.md` without showing a diff preview first.
+- **NEVER** edit `VOICE.md` tone, diction, or rhetorical patterns without explicit approval.
+- Prowl is dormant. Do not wire `prowl.ts`, `sentinel.ts`, or `pipelineMetrics.ts` into production routes until `runAgent` returns `AgentResult` and acceptance-rate data exists from 20+ real cases.
+- All case facts are privileged. Never reference outside this project context.
+- Do not create files in `Cases/` or `benchmarks/` without explicit request.
+- Use `grep -E` not `grep -P` (macOS BSD grep compatibility).
