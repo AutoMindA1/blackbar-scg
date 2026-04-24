@@ -7,7 +7,7 @@ const router = Router();
 router.use(authMiddleware);
 
 const createCaseSchema = z.object({
-  name: z.string().min(1).max(500).trim(),
+  name: z.string().trim().min(1).max(500),
   caseType: z.string().max(100).optional(),
   reportType: z.string().max(100).optional(),
   jurisdiction: z.string().max(200).optional(),

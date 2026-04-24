@@ -9,7 +9,7 @@
  * Target: server/services/agentRunner.ts, server/routes/agents.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createMockPrisma, SYNTHETIC_CASE } from '../helpers/mocks.js';
 
 // ─── Pipeline constants ───
@@ -269,7 +269,7 @@ describe('US-02 / Scenario 2: QA score below threshold triggers auto-revision', 
 
     expect(log.type).toBe('error');
     expect(log.message).toContain('3 revision attempts');
-    expect((log.metadata as any).warning).toBe(true);
+    expect((log.metadata as Record<string, unknown>).warning).toBe(true);
   });
 
   // QA score AT threshold passes

@@ -10,7 +10,7 @@
  * Target: server/routes/agents.ts (approve endpoint)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
 import { createMockPrisma, SYNTHETIC_CASE, SYNTHETIC_REPORT } from '../helpers/mocks.js';
 

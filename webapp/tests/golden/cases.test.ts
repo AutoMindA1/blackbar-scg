@@ -10,9 +10,9 @@
  * Target: server/routes/cases.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
-import { createMockPrisma, createMockReq, createMockRes, SYNTHETIC_CASE } from '../helpers/mocks.js';
+import { createMockPrisma,  SYNTHETIC_CASE } from '../helpers/mocks.js';
 
 // Replicate exact schemas from cases.ts
 const createCaseSchema = z.object({

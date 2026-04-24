@@ -200,7 +200,6 @@ export default function HumanCheckpointV2({
                   placeholder="What should the agent do differently?"
                   className="w-full h-24 px-4 py-3 rounded-xl text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none resize-none"
                   style={{ background: 'var(--noir-1)', border: '1px solid var(--noir-3)' }}
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
                   autoFocus
                 />
                 <div className="flex gap-3">

@@ -7,9 +7,9 @@
  * Target: server/routes/documents.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import path from 'path';
-import { createMockPrisma, SYNTHETIC_DOCUMENT } from '../helpers/mocks.js';
+import { createMockPrisma } from '../helpers/mocks.js';
 
 // ─── FILE VALIDATION (replicated from documents.ts) ───
 const ALLOWED_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.pptx', '.txt', '.csv', '.jpg', '.jpeg', '.png', '.tiff', '.bmp']);
@@ -174,6 +174,7 @@ describe('Document Upload — Page Count Heuristic', () => {
 
 // ─── DOCUMENT LIMIT PER CASE ───
 describe('Document Upload — 50-Document Limit', () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let mockPrisma: ReturnType<typeof createMockPrisma>;
 
   beforeEach(() => {

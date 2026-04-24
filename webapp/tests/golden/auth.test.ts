@@ -7,7 +7,7 @@
  * Target: server/routes/auth.ts, server/middleware/auth.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
@@ -99,6 +99,7 @@ describe('Login Flow — bcrypt + JWT', () => {
 // ─── ZOD SCHEMA VALIDATION ───
 describe('Login Schema Validation', () => {
   // Replicate exact schema from auth.ts line 25-28
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { z } = require('zod');
   const loginSchema = z.object({
     email: z.string().email().max(255),

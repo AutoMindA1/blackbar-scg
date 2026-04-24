@@ -9,7 +9,7 @@
  * Target: POST /api/cases, POST /api/cases/:id/documents
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
 import { createMockPrisma, SYNTHETIC_CASE, SYNTHETIC_USER, SYNTHETIC_DOCUMENT } from '../helpers/mocks.js';
 

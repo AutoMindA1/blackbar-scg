@@ -12,7 +12,7 @@
  * Target: server/routes/documents.ts, server/routes/reports.ts, package.json
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -255,7 +255,7 @@ describe('US-05 / Scenario 3: All dependencies pinned', () => {
     };
 
     // All pinned — no semver ranges
-    for (const [pkg, ver] of Object.entries(platinumStack)) {
+    for (const [, ver] of Object.entries(platinumStack)) {
       expect(ver).not.toMatch(/[\^~]/);
       expect(ver).toMatch(/^\d+\.\d+\.\d+$/);
     }

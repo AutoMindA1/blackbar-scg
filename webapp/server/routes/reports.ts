@@ -42,16 +42,63 @@ async function renderDocx(html: string): Promise<Buffer> {
   return result instanceof Buffer ? result : Buffer.from(result as ArrayBuffer);
 }
 
-// Server-side HTML sanitization — strip dangerous tags and event handlers
+// Server-side HTML sanitization — strip dangerous tags, event handlers, and injection vectors
 function sanitizeHtml(html: string): string {
-  return html
+  // Strip null bytes first (evasion technique)
+  let clean = html.replace(/\0/g, '');
+
+  // Decode UTF-7 encoded XSS patterns (+ADw- = <, +AD4- = >) — replace with actual chars then let tag stripping handle it
+  clean = clean.replace(/\+ADw-/g, '<').replace(/\+AD4-/g, '>');
+
+  // Decode URL-encoded and double-encoded patterns
+  try {
+    let decoded = clean;
+    for (let i = 0; i < 3; i++) {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    }
+    clean = decoded;
+  } catch {
+    // malformed URI — keep as-is
+  }
+
+  // Strip dangerous tags (including form, style, base, meta)
+  clean = clean
     .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[\s\S]*?>/gi, '')
+    .replace(/<\/script>/gi, '')
     .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<iframe[\s\S]*?>/gi, '')
     .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<object[\s\S]*?>/gi, '')
     .replace(/<embed[\s\S]*?>/gi, '')
     .replace(/<link[\s\S]*?>/gi, '')
-    .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/javascript\s*:/gi, 'blocked:');
+    .replace(/<form[\s\S]*?<\/form>/gi, '')
+    .replace(/<form[\s\S]*?>/gi, '')
+    .replace(/<\/form>/gi, '')
+    .replace(/<base[\s\S]*?>/gi, '')
+    .replace(/<meta[\s\S]*?>/gi, '');
+
+  // Strip event handlers (on* attributes) with whitespace-tolerant matching
+  clean = clean.replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|`[^`]*`|[^\s>]+)/gi, '');
+
+  // Block javascript: URIs (with whitespace/tab/newline evasion) — remove the entire attribute value
+  clean = clean.replace(/(href|src|action)\s*=\s*["']?\s*j[\s\t\n\r]*a[\s\t\n\r]*v[\s\t\n\r]*a[\s\t\n\r]*s[\s\t\n\r]*c[\s\t\n\r]*r[\s\t\n\r]*i[\s\t\n\r]*p[\s\t\n\r]*t[\s\t\n\r]*:[^"'>]*/gi, '$1="#blocked"');
+  clean = clean.replace(/j[\s\t\n\r]*a[\s\t\n\r]*v[\s\t\n\r]*a[\s\t\n\r]*s[\s\t\n\r]*c[\s\t\n\r]*r[\s\t\n\r]*i[\s\t\n\r]*p[\s\t\n\r]*t[\s\t\n\r]*:/gi, 'blocked:');
+
+  // Block HTML entity encoded content (&#106;&#97;... etc)
+  clean = clean.replace(/&#\d+;/g, '');
+  clean = clean.replace(/&#x[\da-f]+;/gi, '');
+
+  // Block data: URIs in attributes
+  clean = clean.replace(/\bdata\s*:\s*text\/html/gi, 'blocked:text/html');
+
+  // Block CSS expression() and url(javascript:)
+  clean = clean.replace(/expression\s*\(/gi, 'blocked(');
+  clean = clean.replace(/url\s*\(\s*javascript/gi, 'url(blocked');
+
+  return clean;
 }
 
 const router = Router();

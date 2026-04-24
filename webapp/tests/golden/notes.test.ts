@@ -8,7 +8,7 @@
  * Pattern: replicate validation schemas as pure functions; mock Prisma for handler logic.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
 import { createMockPrisma, createMockReq, createMockRes, SYNTHETIC_NOTE, SYNTHETIC_CASE } from '../helpers/mocks.js';
 

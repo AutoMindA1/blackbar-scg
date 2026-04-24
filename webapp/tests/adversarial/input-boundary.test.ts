@@ -12,7 +12,7 @@ import { z } from 'zod';
 
 // Replicate the exact Zod schemas from the routes
 const createCaseSchema = z.object({
-  name: z.string().min(1).max(500).trim(),
+  name: z.string().trim().min(1).max(500),
   caseType: z.string().max(100).optional(),
   reportType: z.string().max(100).optional(),
   jurisdiction: z.string().max(200).optional(),
@@ -241,10 +241,11 @@ describe('Injection Vectors (Prisma should prevent, Zod is first layer)', () => 
     // Zod passes it — Prisma ORM will parameterize. Safe but worth documenting.
   });
 
-  it('SQL injection in email — caught by email validation', () => {
+  it('SQL injection in email — Zod passes RFC-valid email, Prisma parameterizes', () => {
     const result = loginSchema.safeParse({ email: "admin'--@test.com", password: 'test' });
-    // Zod's .email() rejects this
-    expect(result.success).toBe(false);
+    // RFC 5321 allows quotes in local-part — this is a valid email address.
+    // Prisma parameterized queries prevent SQL injection regardless.
+    expect(result.success).toBe(true);
   });
 
   it('JSON injection in case name', () => {

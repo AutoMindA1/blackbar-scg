@@ -11,16 +11,43 @@
 import { describe, it, expect } from 'vitest';
 
 // Extract sanitizeHtml for direct testing
-// We replicate the exact function from reports.ts line 46-55
+// Mirrors the hardened function from reports.ts
 function sanitizeHtml(html: string): string {
-  return html
+  let clean = html.replace(/\0/g, '');
+  clean = clean.replace(/\+ADw-/g, '<').replace(/\+AD4-/g, '>');
+  try {
+    let decoded = clean;
+    for (let i = 0; i < 3; i++) {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    }
+    clean = decoded;
+  } catch { /* malformed URI */ }
+  clean = clean
     .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[\s\S]*?>/gi, '')
+    .replace(/<\/script>/gi, '')
     .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<iframe[\s\S]*?>/gi, '')
     .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<object[\s\S]*?>/gi, '')
     .replace(/<embed[\s\S]*?>/gi, '')
     .replace(/<link[\s\S]*?>/gi, '')
-    .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/javascript\s*:/gi, 'blocked:');
+    .replace(/<form[\s\S]*?<\/form>/gi, '')
+    .replace(/<form[\s\S]*?>/gi, '')
+    .replace(/<\/form>/gi, '')
+    .replace(/<base[\s\S]*?>/gi, '')
+    .replace(/<meta[\s\S]*?>/gi, '');
+  clean = clean.replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|`[^`]*`|[^\s>]+)/gi, '');
+  clean = clean.replace(/(href|src|action)\s*=\s*["']?\s*j[\s\t\n\r]*a[\s\t\n\r]*v[\s\t\n\r]*a[\s\t\n\r]*s[\s\t\n\r]*c[\s\t\n\r]*r[\s\t\n\r]*i[\s\t\n\r]*p[\s\t\n\r]*t[\s\t\n\r]*:[^"'>]*/gi, '$1="#blocked"');
+  clean = clean.replace(/j[\s\t\n\r]*a[\s\t\n\r]*v[\s\t\n\r]*a[\s\t\n\r]*s[\s\t\n\r]*c[\s\t\n\r]*r[\s\t\n\r]*i[\s\t\n\r]*p[\s\t\n\r]*t[\s\t\n\r]*:/gi, 'blocked:');
+  clean = clean.replace(/&#\d+;/g, '');
+  clean = clean.replace(/&#x[\da-f]+;/gi, '');
+  clean = clean.replace(/\bdata\s*:\s*text\/html/gi, 'blocked:text/html');
+  clean = clean.replace(/expression\s*\(/gi, 'blocked(');
+  clean = clean.replace(/url\s*\(\s*javascript/gi, 'url(blocked');
+  return clean;
 }
 
 describe('XSS Sanitizer — OWASP Evasion Vectors', () => {

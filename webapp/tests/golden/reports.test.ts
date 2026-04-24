@@ -8,9 +8,9 @@
  * Target: server/routes/reports.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
-import { createMockPrisma, createMockReq, createMockRes, SYNTHETIC_REPORT, SYNTHETIC_CASE } from '../helpers/mocks.js';
+import { createMockPrisma, SYNTHETIC_REPORT } from '../helpers/mocks.js';
 
 // Replicate exact sanitizeHtml from reports.ts line 46-55
 function sanitizeHtml(html: string): string {
@@ -255,7 +255,7 @@ describe('buildExportHtml — Structure Assertions', () => {
       'rebuttal': 'Rebuttal Report',
       'supplemental': 'Supplemental Report',
     };
-    for (const [type, label] of Object.entries(mapping)) {
+    for (const [, label] of Object.entries(mapping)) {
       expect(label).toBeTruthy();
     }
     // Default fallback for unknown type

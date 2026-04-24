@@ -13,7 +13,7 @@
  * Target: (future) server/middleware/tenant.ts, server/routes/cases.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
@@ -27,13 +27,6 @@ interface Tenant {
   createdAt: Date;
 }
 
-interface PlatinumUser {
-  id: string;
-  tenantId: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'consultant' | 'superadmin';
-}
 
 interface PlatinumCase {
   id: string;
@@ -49,7 +42,9 @@ describe('US-04 / Scenario 1: Attorney cannot see another attorney\'s cases', ()
 
   // Given Tenant "SCG" has Cases [A, B, C]
   // And Tenant "Smith Law" has Cases [D, E]
-  const tenants: Tenant[] = [
+  // @ts-expect-error unused but documents test data
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _tenants: Tenant[] = [
     { id: 'tenant-scg', name: 'Swainston Consulting Group', slug: 'scg', active: true, createdAt: new Date() },
     { id: 'tenant-smith', name: 'Smith Law', slug: 'smith-law', active: true, createdAt: new Date() },
   ];

@@ -8,9 +8,9 @@
  * Target: server/routes/agents.ts, server/services/agentRunner.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { z } from 'zod';
-import { createMockPrisma, createMockReq, createMockRes, SYNTHETIC_CASE } from '../helpers/mocks.js';
+import { createMockPrisma } from '../helpers/mocks.js';
 
 // Replicate exact schemas from agents.ts
 const validStages = ['intake', 'research', 'drafting', 'qa'] as const;
@@ -34,16 +34,16 @@ describe('Agent Pipeline — Stage Validation', () => {
   });
 
   it('rejects invalid stage', () => {
-    expect(validStages.includes('invalid' as any)).toBe(false);
+    expect(validStages.includes('invalid' as Record<string, unknown>)).toBe(false);
   });
 
   it('rejects export as agent stage', () => {
     // export is a stage in the pipeline but NOT an agent stage
-    expect(validStages.includes('export' as any)).toBe(false);
+    expect(validStages.includes('export' as Record<string, unknown>)).toBe(false);
   });
 
   it('rejects complete as agent stage', () => {
-    expect(validStages.includes('complete' as any)).toBe(false);
+    expect(validStages.includes('complete' as Record<string, unknown>)).toBe(false);
   });
 
   it('stage order matches pipeline: intake → research → drafting → qa', () => {
@@ -210,7 +210,7 @@ describe('QA Scorecard — Retrieval', () => {
 
     const metadata = log!.metadata as Record<string, unknown>;
     expect(metadata.qa).toEqual(qaData);
-    expect((metadata.qa as any).score).toBe(87);
+    expect((metadata.qa as Record<string, unknown>).score).toBe(87);
   });
 
   it('handles metadata without qa key', async () => {
