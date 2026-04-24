@@ -3,12 +3,14 @@ import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 import { prisma } from '../db.js';
 import { AuthRequest, authMiddleware } from '../middleware/auth.js';
+import { SWAINSTON_ONLY } from '../middleware/domainGuard.js';
 import { runAgent, AgentBroadcast } from '../services/agentRunner.js';
 import { getBrainQueries } from '../services/promptLoader.js';
 import { /* maybeProwl, */ resolveProwl, getProwlStatus } from '../services/prowl.js';
 
 const router = Router();
 router.use(authMiddleware);
+router.use(SWAINSTON_ONLY);
 
 // Rate limit agent triggers — max 2 per minute per IP (API cost protection)
 const agentTriggerLimiter = rateLimit({

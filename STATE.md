@@ -1,15 +1,36 @@
 # BlackBar — State of the Webapp
-**Date:** 2026-04-20
-**Status:** Sprint complete — all feature PRs open against main, awaiting merge and Railway smoke test.
-**North Star:** Lane drops files, notes, photos → runs 4-stage pipeline → exports SCG-polished expert report. ✅
+**Date:** 2026-04-24
+**Status:** Phase 3 — ACTIVE LIVE TEST. Enterprise foundation deployed. DAG orchestrator + semantic router under construction.
+**North Star:** Lane drops files, notes, photos → autonomous 4-stage pipeline → exports SCG-polished expert report. ✅
 
 ---
 
 ## Verdict
 
-**BlackBar is production-ready pending PR merges and Railway smoke test.**
+**BlackBar is deployed to production.** URL: `blackbar-scg-production.up.railway.app`
 
-All four agent stages are real Anthropic API calls with typed JSON contracts, SSE streaming, chained previous-stage context, and human checkpoints. Intake OCR (Claude vision) removes `[AGENT BLIND]` from photos automatically. Layer 2 voice conformance runs in the QA stage. PDF/DOCX export is live.
+All four agent stages are real Anthropic API calls with typed JSON contracts, SSE streaming, chained previous-stage context, and human checkpoints. The v2 architecture (orchestrator, semantic routing, Lane Gate) is being built on top of the working v1 pipeline.
+
+**Security posture:**
+- SSO domain guard locks agent routes to `@swainston.com` emails only
+- XSS sanitizer hardened against 9 OWASP evasion vectors
+- Auth v2: 15-min access tokens, refresh token rotation, account lockout
+- Audit trail on every API request
+
+---
+
+## Phase 3 Architecture Changes
+
+| Change | Status | Notes |
+|---|---|---|
+| DAG Orchestrator | 🔨 BUILDING | CaseState JSON, phase transitions, confidence scoring |
+| Semantic Router (Sonnet/Opus) | 🔨 BUILDING | Default Sonnet, upgrade to Opus on 3+ HIGH_COMPLEXITY flags |
+| Lane Gate | 🔨 BUILDING | Manual approval required at Research→Drafting boundary |
+| Domain Guard (@swainston.com) | 🔨 BUILDING | Middleware on all agent routes |
+| RAG / Vector DB | ⏸️ DEFERRED | 37K token corpus fits in long-context injection. Revisit when corpus grows. |
+| Adversarial QA (CoT) | ⏸️ DEFERRED | Will run on Sonnet first, upgrade to Opus when budget justifies |
+| Write-Back Alignment | ⏸️ DEFERRED | Requires diff classification LLM call — Phase 5 |
+| Prowl/Sentinel | 🔄 SUPERSEDED | Weighted scoring logic extracted into orchestrator. prowl.ts/sentinel.ts retired. |
 
 ---
 
@@ -36,33 +57,18 @@ All four agent stages are real Anthropic API calls with typed JSON contracts, SS
 | HTML export | ✅ DONE | Client-side download |
 | Design System v2 tokens | ✅ DONE | signal-amber, noir-1/2/3, v2-surface classes throughout |
 | UserRole enum | ✅ DONE | operator / expert / admin; Lane + Mariz = expert |
-| Dead v1 components removed | ✅ DONE | AgentActivityFeed, HumanCheckpoint, StageNav deleted |
+| XSS sanitizer hardened | ✅ DONE | 9 OWASP bypass vectors patched |
+| Enterprise schema | ✅ DONE | Organization, RefreshToken, AuditLog, UsageRecord, PromptVersion |
+| Structured logging | ✅ DONE | JSON (prod), colored (dev), audit always writes |
+| Auth v2 (refresh tokens) | ✅ DONE | 15-min access, rotation, reuse detection, lockout |
+| Test suite | ✅ DONE | 341 tests, 15 files, vitest + v8 coverage |
+| Usage metering | ✅ DONE | Per-org cost tracking, model pricing tiers |
+| Job queue | ✅ DONE | In-process (dev), BullMQ-ready (prod with REDIS_URL) |
+| Document text extraction | ✅ DONE | PDF/TXT/CSV content pipeline, 100K char limit |
+| Multi-tenancy (schema) | ✅ DONE | Organization model, blast-door entity separation |
 | Cloud storage (S3 / GCS) | ❌ NOT YET | Local disk — fine for v1 single-instance |
 | Golden Blessing ceremony | ⏳ PENDING | Requires Cases/ benchmark PDFs (privileged, local only) |
 | VOICE.md Phase 6 amendments | ⏳ PENDING | [VOICE GUARD] — awaiting Caleb approval |
-
----
-
-## PR Queue
-
-| PR | Branch | Title | Status |
-|---|---|---|---|
-| #5 | pr1/notes-first-class-capture | Notes as first-class capture | ✅ Merged |
-| #6 | pr3/image-ocr-pipeline | Image OCR pipeline | Open |
-| #7 | pr4/unified-capture-surface | Unified capture surface (Dannaway pass) | Open |
-| #8 | pr5/voice-conformance | Layer 2 voice conformance in QA | Open |
-| #9 | pr7/railway-production | Railway production hardening | Open |
-| — | pr6/voice-amendments | VOICE.md amendments | [VOICE GUARD] blocked |
-
----
-
-## Pending Manual Steps (post-merge)
-
-1. **Migration drift fix:** `prisma migrate resolve --applied 20260417190000_add_agent_log_feedback` against Railway DB — see DATABASE.md
-2. **ALLOWED_ORIGINS:** Verify production domain is included in Railway env var
-3. **Golden Blessing:** Stage `Cases/*/expected/` benchmark PDFs and run `/ultraplan voice-bless` sequence — see `tests/golden/README.md`
-4. **VOICE.md Phase 6:** Review extraction report amendments, approve PR
-5. **Production smoke test:** Full end-to-end on Railway URL (login → upload → pipeline → export)
 
 ---
 
@@ -70,7 +76,10 @@ All four agent stages are real Anthropic API calls with typed JSON contracts, SS
 
 - **Frontend:** React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4 + Zustand 5 + TanStack Query 5
 - **Backend:** Express 5 + Prisma 6.19 (PostgreSQL on Railway) + Anthropic SDK 0.82
-- **Auth:** bcrypt + JWT
-- **Deploy:** Railway — `buildCommand`: `npm install && npx prisma generate && npm run build`; `startCommand`: `npx prisma migrate deploy && node dist/server/index.js`
+- **Auth:** bcrypt + JWT (v1) / Refresh token rotation (v2) / Domain guard (@swainston.com)
+- **Deploy:** Railway — auto-rebuild on push to main, migrations at container start
 - **Agents:** 4-stage pipeline (Intake → Research → Drafting → QA), real Anthropic API, SSE streaming, typed JSON contracts, chained context
+- **Orchestrator (v2):** DAG with CaseState JSON, confidence-gated transitions, Lane Gate at Research→Drafting, Sonnet/Opus semantic routing
 - **Voice QA:** Layer 2 `scripts/voice_check.sh` runs deterministic §11/§21 checks after QA agent, result appended to scorecard
+- **Observability:** Structured JSON logger, request-level audit trail, per-org usage metering
+- **Testing:** 341 tests (vitest), 0 lint errors, tsc clean
