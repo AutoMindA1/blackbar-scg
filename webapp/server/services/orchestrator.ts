@@ -123,6 +123,16 @@ export function evaluateTransition(state: CaseState): TransitionResult {
     };
   }
 
+  // QA phase with no results yet — hold until agent completes
+  if (currentPhase === 'qa' && !state.qa) {
+    return {
+      shouldAdvance: false,
+      nextPhase: null,
+      trigger: 'auto',
+      reason: 'QA results not yet available — waiting for agent completion',
+    };
+  }
+
   // Special case: QA → Drafting loop (score < 85 and iterations < 2)
   if (currentPhase === 'qa' && state.qa) {
     const qaScore = state.qa.score;

@@ -176,6 +176,16 @@ router.post('/:caseId/approve', async (req: AuthRequest, res: Response) => {
   const { gate } = bodyCheck.data;
 
   try {
+    const expectedPhase = gate === 'research' ? 'pending_research_approval' : 'pending_review';
+    const preState = await getOrCreateState(caseId);
+    if (preState.phase !== expectedPhase) {
+      res.status(409).json({
+        error: `Case is at '${preState.phase}', not '${expectedPhase}' — cannot approve ${gate} gate`,
+        currentPhase: preState.phase,
+      });
+      return;
+    }
+
     const state = await approveGate(caseId, gate);
 
     // Log the approval action
