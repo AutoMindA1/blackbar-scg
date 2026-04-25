@@ -3,7 +3,8 @@ name: Cleanup Stale Branches
 on:
   push:
     branches:
-      - copilot/cleanup-stale-branches
+      - main
+  workflow_dispatch:
 
 jobs:
   cleanup:
@@ -77,11 +78,13 @@ jobs:
           echo ""
           echo "=== Summary ==="
           echo "Deleted (${#DELETED[@]}):"
-          for b in "${DELETED[@]:-}"; do [ -n "$b" ] && echo "  ✓ $b"; done
+          for b in "${DELETED[@]}"; do echo "  ✓ $b"; done
+          [ ${#DELETED[@]} -eq 0 ] && echo "  (none)"
 
           echo ""
           echo "Kept (not found / protected / error) (${#SKIPPED[@]}):"
-          for b in "${SKIPPED[@]:-}"; do [ -n "$b" ] && echo "  - $b"; done
+          for b in "${SKIPPED[@]}"; do echo "  - $b"; done
+          [ ${#SKIPPED[@]} -eq 0 ] && echo "  (none)"
 
           echo ""
           echo "Preserved by design:"
@@ -90,11 +93,12 @@ jobs:
           echo "  ✓ claude/init-project-setup-GdrOq  (2 unique commits: enterprise foundation + CLAUDE.md rewrite)"
           echo "  ✓ copilot/cleanup-stale-branches   (this branch — current PR)"
 
-      - name: Self-cleanup this workflow file
+      - name: Also delete this cleanup branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          # Remove this one-shot workflow from the branch so it doesn't
-          # accumulate in history.  Non-fatal if it fails.
-          echo "Note: workflow file will be removed on merge or manually."
+          # Clean up the PR branch itself after merge (idempotent)
+          gh api --method DELETE "repos/$REPO/git/refs/heads/copilot/cleanup-stale-branches" 2>/dev/null \
+            && echo "DELETED: copilot/cleanup-stale-branches" \
+            || echo "SKIP: copilot/cleanup-stale-branches (not found or already deleted)"
