@@ -1,0 +1,104 @@
+name: Cleanup Stale Branches
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Delete stale branches
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Branches with 0 unique commits vs main — fully merged or behind main
+          STALE_BRANCHES=(
+            "chore/seed-user-cleanup"
+            "copilot/manage-private-repo-access"
+            "copilot/view-main-branch"
+            "pr2/image-preview-ui-polish"
+            "pr3/image-ocr-pipeline"
+            "pr4/unified-capture-surface"
+            "pr5/voice-conformance"
+            "pr7/railway-production"
+            "pr8/cleanup-handoff"
+            "copilot/view-current-webapp-state"
+            "copilot/create-beautiful-readme"
+            "copilot/create-implementation-plan"
+          )
+
+          echo "=== BlackBar Branch Cleanup ==="
+          echo ""
+          echo "Branches to delete (stale, fully merged, or copilot-exploration):"
+          for branch in "${STALE_BRANCHES[@]}"; do
+            echo "  - $branch"
+          done
+          echo ""
+
+          DELETED=()
+          SKIPPED=()
+
+          for branch in "${STALE_BRANCHES[@]}"; do
+            # Check branch exists
+            STATUS=$(gh api "repos/$REPO/git/refs/heads/$branch" --silent 2>&1 && echo "exists" || echo "not_found")
+
+            if echo "$STATUS" | grep -q "not_found"; then
+              echo "SKIP (not found): $branch"
+              SKIPPED+=("$branch")
+              continue
+            fi
+
+            # Verify it is not protected
+            PROTECTED=$(gh api "repos/$REPO/branches/$branch" --jq '.protected' 2>/dev/null || echo "false")
+            if [ "$PROTECTED" = "true" ]; then
+              echo "SKIP (protected): $branch"
+              SKIPPED+=("$branch")
+              continue
+            fi
+
+            # Delete it
+            if gh api --method DELETE "repos/$REPO/git/refs/heads/$branch" 2>/dev/null; then
+              echo "DELETED: $branch"
+              DELETED+=("$branch")
+            else
+              echo "ERROR deleting: $branch"
+              SKIPPED+=("$branch")
+            fi
+          done
+
+          echo ""
+          echo "=== Summary ==="
+          echo "Deleted (${#DELETED[@]}):"
+          for b in "${DELETED[@]}"; do echo "  ✓ $b"; done
+          [ ${#DELETED[@]} -eq 0 ] && echo "  (none)"
+
+          echo ""
+          echo "Kept (not found / protected / error) (${#SKIPPED[@]}):"
+          for b in "${SKIPPED[@]}"; do echo "  - $b"; done
+          [ ${#SKIPPED[@]} -eq 0 ] && echo "  (none)"
+
+          echo ""
+          echo "Preserved by design:"
+          echo "  ✓ main"
+          echo "  ✓ staging"
+          echo "  ✓ claude/init-project-setup-GdrOq  (2 unique commits: enterprise foundation + CLAUDE.md rewrite)"
+          echo "  ✓ copilot/cleanup-stale-branches   (this branch — current PR)"
+
+      - name: Also delete this cleanup branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Clean up the PR branch itself after merge (idempotent)
+          gh api --method DELETE "repos/$REPO/git/refs/heads/copilot/cleanup-stale-branches" 2>/dev/null \
+            && echo "DELETED: copilot/cleanup-stale-branches" \
+            || echo "SKIP: copilot/cleanup-stale-branches (not found or already deleted)"
