@@ -5,11 +5,15 @@
 Cases/
 benchmarks/
 
-# Environment
+# Environment — never commit
 .env
+.env.save
+.env.save.*
 .envy
 .env.local
 .env.*.local
+.env.backup
+.env.bak
 
 # Node
 node_modules/
@@ -29,3 +33,10 @@ Internal-IP/
 *.docx
 image*.jpg
 .legion/
+
+# Claude Code — local-only settings (may contain tokens)
+.claude/settings.local.json
+webapp/.claude/settings.local.json
+
+# Meeting transcripts and summaries — touch case names + privileged commentary
+meetings/
