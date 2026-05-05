@@ -6,6 +6,7 @@ import path from 'path';
 import { prisma } from '../db.js';
 import { buildSystemPrompt, getBrainQueries } from './promptLoader.js';
 import { extractImageText, isImagePath } from './imageOCR.js';
+import { evaluatePatternCForCase } from './orchestrator.js';
 import {
   AgentResult as TypedAgentResult,
   FALLBACKS,
@@ -473,7 +474,8 @@ export async function runAgent(
       );
     }
 
-    // Broadcast completion
+    // Broadcast completion (legacy event — kept for compat; PR 5.1 will retire
+    // it once the frontend has migrated to auto_advance / hitl_required).
     broadcast(broadcastFn, caseId, stage, 'complete',
       qaScorecard
         ? `${capitalize(stage)} complete — ${qaScorecard.score}/100`
@@ -486,11 +488,62 @@ export async function runAgent(
       },
     );
 
+    // Pattern C — HITL routing. Emit auto_advance OR hitl_required so the
+    // frontend (PR 5) can show a silent toast vs. the approval modal.
+    // T1/T2/T5/T9/T10 detectors aren't wired yet; their inputs default false
+    // here. T3 (AGENT BLIND) and T4 (QA pass) and T6 (Lane Gate) are live.
+    try {
+      const patternCStage = stage as 'intake' | 'research' | 'drafting' | 'qa';
+      const pcResult = await evaluatePatternCForCase(caseId, patternCStage, {
+        findings: [],
+        qaScore: qaScorecard?.score,
+        agentError: false,
+      });
+
+      if (pcResult.autoAdvance) {
+        broadcast(broadcastFn, caseId, stage, 'auto_advance',
+          `${capitalize(stage)} complete — advancing to next stage`,
+          {
+            from: stage,
+            to: nextStageOf(patternCStage),
+            triggers: [],
+          },
+        );
+      } else {
+        broadcast(broadcastFn, caseId, stage, 'hitl_required',
+          `${capitalize(stage)} complete — review required`,
+          {
+            stage,
+            triggers: pcResult.triggers,
+            ...(qaScorecard ? { qa: qaScorecard } : {}),
+            ...(parsedTyped ? { parsed: parsedTyped } : {}),
+          },
+        );
+      }
+    } catch (pcErr) {
+      console.error('[agentRunner] Pattern C evaluation failed (non-fatal):', pcErr);
+      // Frontend still has the legacy `complete` event above; pipeline continues.
+    }
+
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown agent error';
     console.error(`[agentRunner] Error in ${stage} for case ${caseId}:`, message);
     broadcast(broadcastFn, caseId, stage, 'error', `Agent error: ${message}`);
     await persistLog(caseId, stage, 'error', message);
+  }
+}
+
+/**
+ * User-facing "next stage" for Pattern C auto-advance toasts. Skips the
+ * intermediate `pending_*_approval` DAG phases since those are routing
+ * states, not user-visible stages.
+ */
+function nextStageOf(stage: 'intake' | 'research' | 'drafting' | 'qa'): string {
+  switch (stage) {
+    case 'intake': return 'research';
+    case 'research': return 'drafting';
+    case 'drafting': return 'qa';
+    case 'qa': return 'export';
   }
 }
 

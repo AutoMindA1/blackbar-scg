@@ -1,0 +1,10 @@
+{
+  "patternC": {
+    "intakeConfidenceThreshold": 0.7,
+    "researchConfidenceThreshold": 0.7,
+    "draftingConfidenceThreshold": 0.65,
+    "qaPassThreshold": 70,
+    "voiceDriftThreshold": 0.15,
+    "autoAdvanceToastDuration": 4000
+  }
+}

@@ -27,6 +27,8 @@
  *   export → complete (auto)
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { prisma } from '../db.js';
 import type {
   CaseState,
@@ -36,6 +38,13 @@ import type {
 } from '../types/caseState.js';
 import { createInitialState } from '../types/caseState.js';
 import { routeModel, getComplexityFlags, estimateCostCents } from './modelRouter.js';
+import type {
+  PatternCConfig,
+  PatternCInput,
+  PatternCOverride,
+  PatternCResult,
+  PatternCTrigger,
+} from '../types/patternC.js';
 
 // ─── DAG Definition ─────────────────────────────────────────────
 
@@ -411,6 +420,217 @@ export async function approveGate(
   );
 
   return state;
+}
+
+// ─── Pattern C — HITL routing ───────────────────────────────────
+
+const PATTERN_C_DEFAULTS: PatternCConfig = {
+  intakeConfidenceThreshold: 0.7,
+  researchConfidenceThreshold: 0.7,
+  draftingConfidenceThreshold: 0.65,
+  qaPassThreshold: 70,
+  voiceDriftThreshold: 0.15,
+  autoAdvanceToastDuration: 4000,
+};
+
+let _patternCConfig: PatternCConfig | null = null;
+
+/**
+ * Load the Pattern C config from webapp/config/settings.json once and cache.
+ * Falls back to PATTERN_C_DEFAULTS if the file is missing or malformed (logged).
+ * The settings file is the source of truth; defaults are a safety net.
+ */
+export function getPatternCConfig(): PatternCConfig {
+  if (_patternCConfig) return _patternCConfig;
+  try {
+    const path = join(process.cwd(), 'config', 'settings.json');
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as { patternC?: Partial<PatternCConfig> };
+    _patternCConfig = { ...PATTERN_C_DEFAULTS, ...(parsed.patternC ?? {}) };
+  } catch (err) {
+    console.warn('[orchestrator] settings.json not loaded — using Pattern C defaults:', err);
+    _patternCConfig = PATTERN_C_DEFAULTS;
+  }
+  return _patternCConfig;
+}
+
+/** For tests — clears the cached config so a fresh read happens. */
+export function _resetPatternCConfigCache(): void {
+  _patternCConfig = null;
+}
+
+/**
+ * Pure evaluator: given a stage's outputs + the per-case override + the
+ * resolved global config, return the set of fired Pattern C triggers and
+ * whether the orchestrator should auto-advance.
+ *
+ * Order of evaluation matches HITL-PATTERN-C-SPEC.md §Order of evaluation:
+ * unconditional triggers (T9, T6, T8) → case override (T7) → threshold
+ * checks (T1–T5, T10).
+ */
+export function evaluatePatternC(
+  input: PatternCInput,
+  override: PatternCOverride | null,
+  config: PatternCConfig,
+): PatternCResult {
+  const triggers: PatternCTrigger[] = [];
+
+  // Override-aware threshold lookup. Falls through to config when override
+  // doesn't specify a value — per-case override is opt-in per field.
+  const merged = {
+    intakeConfidenceThreshold: override?.intakeConfidenceThreshold ?? config.intakeConfidenceThreshold,
+    researchConfidenceThreshold: override?.researchConfidenceThreshold ?? config.researchConfidenceThreshold,
+    draftingConfidenceThreshold: override?.draftingConfidenceThreshold ?? config.draftingConfidenceThreshold,
+    qaPassThreshold: override?.qaPassThreshold ?? config.qaPassThreshold,
+    voiceDriftThreshold: override?.voiceDriftThreshold ?? config.voiceDriftThreshold,
+  };
+
+  // ─── Unconditional triggers ───
+  if (input.voiceGuardActive) {
+    triggers.push({
+      type: 'T9',
+      reason: 'VOICE GUARD content detected — Caleb approval required (read-only)',
+    });
+  }
+
+  if (input.isLaneGateTransition) {
+    triggers.push({
+      type: 'T6',
+      reason: 'Research → Drafting requires Lane approval (Lane Gate)',
+    });
+  }
+
+  if (input.agentError) {
+    triggers.push({
+      type: 'T8',
+      reason: 'Agent stage emitted error event',
+    });
+  }
+
+  // ─── Case-override trigger ───
+  if (override?.superviseClosely) {
+    triggers.push({
+      type: 'T7',
+      reason: 'Supervise closely toggled on for this case',
+    });
+  }
+
+  // ─── Threshold-driven triggers ───
+  // T1: low-confidence finding (any one finding below the stage threshold).
+  const stageThresholds: Record<PatternCInput['stage'], number> = {
+    intake: merged.intakeConfidenceThreshold,
+    research: merged.researchConfidenceThreshold,
+    drafting: merged.draftingConfidenceThreshold,
+    qa: merged.intakeConfidenceThreshold, // QA findings reuse intake-style confidence threshold
+  };
+  const stageThreshold = stageThresholds[input.stage];
+  const lowConfidence = input.findings.find(
+    (f) => typeof f.confidence === 'number' && f.confidence < stageThreshold,
+  );
+  if (lowConfidence) {
+    triggers.push({
+      type: 'T1',
+      reason: `Finding confidence ${lowConfidence.confidence!.toFixed(2)} < threshold ${stageThreshold}`,
+      payload: { confidence: lowConfidence.confidence, threshold: stageThreshold },
+    });
+  }
+
+  // T2: note-vs-document contradiction (caller-detected).
+  if (input.hasNoteContradiction) {
+    triggers.push({
+      type: 'T2',
+      reason: 'Note contradicts a parsed document — human reconciliation required',
+    });
+  }
+
+  // T3: [AGENT BLIND] content (e.g., images without OCR) at intake/research time.
+  if (input.hasAgentBlindContent) {
+    triggers.push({
+      type: 'T3',
+      reason: 'Material has no extracted text — agent cannot reason over it',
+    });
+  }
+
+  // T4: QA score below pass threshold (only fires on the QA stage).
+  if (input.stage === 'qa' && typeof input.qaScore === 'number' && input.qaScore < merged.qaPassThreshold) {
+    triggers.push({
+      type: 'T4',
+      reason: `QA score ${input.qaScore} < pass threshold ${merged.qaPassThreshold}`,
+      payload: { score: input.qaScore, threshold: merged.qaPassThreshold },
+    });
+  }
+
+  // T5: voice fingerprint drift > threshold (typically a drafting-stage signal).
+  if (typeof input.voiceDrift === 'number' && input.voiceDrift > merged.voiceDriftThreshold) {
+    triggers.push({
+      type: 'T5',
+      reason: `Voice drift ${input.voiceDrift.toFixed(3)} > threshold ${merged.voiceDriftThreshold}`,
+      payload: { drift: input.voiceDrift, threshold: merged.voiceDriftThreshold },
+    });
+  }
+
+  // T10: position-flip on pressure. STUB — fires only when an external detector
+  // sets the flag. Real detection lands in a follow-up after Myers-case
+  // calibration data exists (see PR 5.1 / future detector work).
+  if (input.positionFlipDetected) {
+    triggers.push({
+      type: 'T10',
+      reason: 'Position flip detected — agent reversed prior position under pressure',
+    });
+  }
+
+  return { triggers, autoAdvance: triggers.length === 0 };
+}
+
+/**
+ * Convenience wrapper: load case override + computed inputs from the DB,
+ * then call evaluatePatternC. Used by agentRunner after a stage completes.
+ *
+ * `inputs.findings`, `inputs.qaScore`, `inputs.voiceDrift` come from the
+ * just-completed stage output. T2/T9/T10 default false unless the agent or
+ * an upstream detector sets them — those wires land in future PRs.
+ */
+export async function evaluatePatternCForCase(
+  caseId: string,
+  stage: PatternCInput['stage'],
+  inputs: {
+    findings: Array<{ confidence?: number }>;
+    qaScore?: number;
+    voiceDrift?: number;
+    agentError?: boolean;
+    hasNoteContradiction?: boolean;
+    voiceGuardActive?: boolean;
+    positionFlipDetected?: boolean;
+  },
+): Promise<PatternCResult> {
+  const caseRow = await prisma.case.findUnique({
+    where: { id: caseId },
+    select: { patternCOverride: true },
+  });
+  const override = (caseRow?.patternCOverride ?? null) as PatternCOverride | null;
+
+  const state = await getOrCreateState(caseId);
+  const hasAgentBlindContent = state.documents.some(
+    (d) => d.extractionStatus === 'pending' || d.extractionStatus === 'processing' || d.extractionStatus === 'failed',
+  );
+
+  // Lane Gate fires when the research stage just completed — research →
+  // pending_research_approval → drafting requires Lane approval.
+  const isLaneGateTransition = stage === 'research';
+
+  const fullInput: PatternCInput = {
+    stage,
+    isLaneGateTransition,
+    agentError: inputs.agentError ?? false,
+    voiceGuardActive: inputs.voiceGuardActive ?? false,
+    positionFlipDetected: inputs.positionFlipDetected ?? false,
+    hasAgentBlindContent,
+    hasNoteContradiction: inputs.hasNoteContradiction ?? false,
+    findings: inputs.findings,
+    qaScore: inputs.qaScore,
+    voiceDrift: inputs.voiceDrift,
+  };
+
+  return evaluatePatternC(fullInput, override, getPatternCConfig());
 }
 
 // ─── Utility Exports ────────────────────────────────────────────
