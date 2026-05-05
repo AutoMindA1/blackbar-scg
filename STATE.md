@@ -1,7 +1,40 @@
 # BlackBar — State of the Webapp
-**Date:** 2026-04-24
-**Status:** Phase 3 — ACTIVE LIVE TEST. Enterprise foundation deployed. DAG orchestrator + semantic router under construction.
+**Date:** 2026-05-05
+**Status:** Phase 3 → v1.0 MVP. `feat/dag-lane-gate-recovery` carries the role-tier + Pattern C work; smoke test pending before merge to `main`.
 **North Star:** Lane drops files, notes, photos → autonomous 4-stage pipeline → exports SCG-polished expert report. ✅
+
+---
+
+## v1.0 MVP Build Sequence — `feat/dag-lane-gate-recovery`
+
+13 commits on branch ahead of `main`. All gates green: 388 tests, lint clean, build ~240ms.
+
+| PR | SHA | Status | What |
+|---|---|---|---|
+| PR 0 | `95a992c` | ✅ landed | Credential rotation incident doc (`Docs/incidents/2026-05-04_credential-rotation.md`) |
+| PR 0.5 | `9d019c3` | ✅ landed | Lint hygiene — suppressed pre-existing `react-hooks/set-state-in-effect` |
+| PR 1 | `815dd20` | ✅ landed | Schema additive: `Case.patternCOverride: Json?` + `User.canRequestAdminView: Boolean` |
+| PR 1.5 | `dd996dd` | ✅ landed | `audit_log` model + Lane role flip `admin → expert` |
+| PR 2 | `67949c8` | ✅ landed | `RequireRole` + `/403` + server `requireRole` middleware + `writeAuditLog` writer (+11 tests) |
+| PR 3 | `af93e94` | ✅ landed | Component role-gating (StageNav / AgentFeed / confidence numerics) + `[AGENT REASONING]` pill |
+| PR 4 | `45e4f8d` | ✅ landed | Pattern C orchestrator: T1–T10 + auto_advance / hitl_required SSE (+18 tests) |
+| PR 5 | `db70ea7` | ✅ landed | Frontend Pattern C handlers + HumanCheckpointV2 trigger UI + supervise-closely toggle |
+| PR 5.1 | `15dd9c0` | ✅ landed | Retire legacy `complete` SSE broadcast; synthetic-T8 fallback on Pattern C eval failure |
+| PR 6 | `7b6c0eb` | ✅ landed | Sign & ship CTA + admin-view toggle + `useEffectiveAdmin` hook (+8 tests) |
+| PR 6.5 | `4032d73` | ✅ landed | Migrate CaseResearch + CaseDrafting to Pattern C events |
+| **PR 8** | — | ⏳ pending | Visual migration: Dashboard / CaseIntake / Login surfaces per `Brand/UI_REFERENCE_v1.html` §04 / §05 / §03. One commit per surface, visual review per surface. |
+| **PR 7** | — | ⏳ pending | E2E smoke test, merge to `main`, Railway auto-deploy, Lane + Mariz UAT (after PR 8 lands) |
+
+**Open follow-up tasks** (not blocking v1.0 ship):
+- PR 6.1 — Dedicated right-docked AdminOverlay panel (spec preferred; PR 6 used universal `useEffectiveAdmin` instead — simpler but inline rendering instead of side-panel)
+- T10 (position-flip on pressure) detector — currently a stub; fires only on `caseState.positionFlipDetected === true`. Real detection lands after Myers-case calibration data.
+- `react-hooks/set-state-in-effect` suppressions on `CaseForm.tsx:46` and `CaseDrafting.tsx:58` — non-Pattern-C antipatterns to refactor in a separate cleanup pass.
+- Project-wide `prefers-reduced-motion` — framer-motion in this project doesn't auto-honor; needs a wrapper or context-level fix.
+- Railway DB password rotation — deferred Path C from PR 0; Caleb to run via Railway CLI.
+
+**Production state (Railway):** 8 migrations applied. `users` rows: Lane `expert + canRequestAdminView=true`, Mariz `expert + canRequestAdminView=false`. New `audit_log` table in place (0 rows; first writes land at the first admin-view toggle).
+
+---
 
 ---
 
@@ -82,4 +115,4 @@ All four agent stages are real Anthropic API calls with typed JSON contracts, SS
 - **Orchestrator (v2):** DAG with CaseState JSON, confidence-gated transitions, Lane Gate at Research→Drafting, Sonnet/Opus semantic routing
 - **Voice QA:** Layer 2 `scripts/voice_check.sh` runs deterministic §11/§21 checks after QA agent, result appended to scorecard
 - **Observability:** Structured JSON logger, request-level audit trail, per-org usage metering
-- **Testing:** 341 tests (vitest), 0 lint errors, tsc clean
+- **Testing:** 388 tests (vitest), 0 lint errors, tsc clean
