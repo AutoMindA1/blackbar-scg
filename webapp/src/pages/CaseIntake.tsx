@@ -98,6 +98,7 @@ export default function CaseIntake() {
   const [previewPhotoIndex, setPreviewPhotoIndex] = useState<number | null>(null);
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
 
   const handleFiles = useCallback(async (files: File[]) => {

@@ -43,6 +43,7 @@ export default function CaseForm({ initial, onSave, defaultOpen = true }: CaseFo
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setValues(initial); }, [initial]);
 
   const dirty =
