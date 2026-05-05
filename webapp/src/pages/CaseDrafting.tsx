@@ -11,9 +11,14 @@ import BearMark from '../components/shared/BearMark';
 import DraftEditor from '../components/shared/DraftEditor';
 import SectionReview from '../components/shared/SectionReview';
 import RevisionPanel from '../components/shared/RevisionPanel';
+import PatternCToast from '../components/shared/PatternCToast';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
 import { api, parseDraftingFromMetadata } from '../lib/api';
+
+function capitalize(s: string): string {
+  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
+}
 
 const DEFAULT_CONTENT = `<h2>Qualifications</h2>
 <p>Lane Swainston is a Certified Building Official (CBO) with the International Code Council (ICC), a position he has held since 1987. He holds additional certifications as a Certified XL Tribometrist (CXLT) through Excel Tribometers, LLC, and as a Walkway Safety Auditor (ASTM F2948-13) through the University of North Texas.</p>
@@ -29,20 +34,48 @@ export default function CaseDrafting() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { activeCase, fetchCase } = useCaseStore();
-  const { logs, status, connectSSE, disconnectSSE, triggerAgent, clearLogs } = useAgentStore();
+  const {
+    logs,
+    status,
+    connectSSE,
+    disconnectSSE,
+    triggerAgent,
+    clearLogs,
+    autoAdvanceEvent,
+    hitlEvent,
+    clearAutoAdvanceEvent,
+    clearHITLEvent,
+  } = useAgentStore();
   const [content, setContent] = useState('');
-  const [showCheckpoint, setShowCheckpoint] = useState(false);
   const [saved, setSaved] = useState(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
+  // Initial content sync — sets state from prop on first load. Suppression
+  // tracked separately from Pattern C work; same lint-rule edge case as
+  // CaseForm.tsx (sets state inside an effect synced to prop change).
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (activeCase?.report?.content) setContent(activeCase.report.content);
     else if (activeCase) setContent(DEFAULT_CONTENT);
   }, [activeCase]);
-  useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Pattern C — auto-advance toast + programmatic navigate after 4s.
+  useEffect(() => {
+    if (!autoAdvanceEvent || !id) return;
+    const target = autoAdvanceEvent.to;
+    const timer = setTimeout(() => {
+      clearAutoAdvanceEvent();
+      navigate(`/cases/${id}/${target}`);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [autoAdvanceEvent, clearAutoAdvanceEvent, id, navigate]);
+
+  const showCheckpoint = !!hitlEvent;
+  const toastMessage = autoAdvanceEvent
+    ? `${capitalize(autoAdvanceEvent.from)} complete · advancing to ${capitalize(autoAdvanceEvent.to)}`
+    : null;
 
   const handleRunDrafting = async () => { if (!id) return; clearLogs(); await triggerAgent(id, 'drafting'); };
   const handleSave = async () => {
@@ -55,13 +88,14 @@ export default function CaseDrafting() {
     if (!id) return;
     await handleSave();
     const { nextStage } = await api.approve(id, 'drafting', 'approve');
-    setShowCheckpoint(false);
+    clearHITLEvent();
     navigate(`/cases/${id}/${nextStage}`);
   };
   const handleRevise = async (notes: string) => {
     if (!id) return;
     await api.approve(id, 'drafting', 'revise', notes);
     clearLogs();
+    clearHITLEvent();
     await triggerAgent(id, 'drafting', notes);
   };
 
@@ -69,11 +103,11 @@ export default function CaseDrafting() {
   const currentIdx = stageOrder.indexOf(activeCase?.stage || 'drafting');
   const completedStages = stageOrder.slice(0, currentIdx);
 
-  // Pull the typed DraftingResult off the latest `complete` SSE event so the
+  // Pull the typed DraftingResult off the latest Pattern C event so the
   // checkpoint summary can show real section/word counts.
   const draftingResult = useMemo(() => {
-    const completeLog = [...logs].reverse().find((l) => l.type === 'complete');
-    return parseDraftingFromMetadata(completeLog?.metadata);
+    const evt = [...logs].reverse().find((l) => l.type === 'auto_advance' || l.type === 'hitl_required');
+    return parseDraftingFromMetadata(evt?.metadata);
   }, [logs]);
 
   const draftingCheckpointSummary = draftingResult
@@ -142,11 +176,14 @@ export default function CaseDrafting() {
         <HumanCheckpointV2
           stage="drafting"
           summary={draftingCheckpointSummary}
+          triggers={hitlEvent?.triggers}
           onApprove={handleApprove}
-          onRevise={async (notes) => { await handleRevise(notes); setShowCheckpoint(false); }}
-          onReject={() => setShowCheckpoint(false)}
+          onRevise={async (notes) => { await handleRevise(notes); }}
+          onReject={clearHITLEvent}
         />
       )}
+
+      <PatternCToast message={toastMessage} />
     </div>
   );
 }

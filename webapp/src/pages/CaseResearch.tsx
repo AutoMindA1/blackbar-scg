@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Scale } from 'lucide-react';
 import Header from '../components/layout/Header';
@@ -9,27 +9,56 @@ import ContextualActionButton from '../components/shared/ContextualActionButton'
 import SkeletonLoader from '../components/shared/SkeletonLoader';
 import FindingsGrid from '../components/shared/FindingsGrid';
 import ResearchSummary from '../components/shared/ResearchSummary';
+import PatternCToast from '../components/shared/PatternCToast';
 import type { Citation } from '../components/shared/CitationCard';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
 import { api, parseResearchFromMetadata } from '../lib/api';
 
+function capitalize(s: string): string {
+  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
+}
+
 export default function CaseResearch() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { activeCase, fetchCase } = useCaseStore();
-  const { logs, status, connectSSE, disconnectSSE, triggerAgent, clearLogs } = useAgentStore();
-  const [showCheckpoint, setShowCheckpoint] = useState(false);
+  const {
+    logs,
+    status,
+    connectSSE,
+    disconnectSSE,
+    triggerAgent,
+    clearLogs,
+    autoAdvanceEvent,
+    hitlEvent,
+    clearAutoAdvanceEvent,
+    clearHITLEvent,
+  } = useAgentStore();
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- checkpoint display is a UI response to agent completion
-  useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
+
+  // Pattern C — auto-advance toast + programmatic navigate after 4s.
+  useEffect(() => {
+    if (!autoAdvanceEvent || !id) return;
+    const target = autoAdvanceEvent.to;
+    const timer = setTimeout(() => {
+      clearAutoAdvanceEvent();
+      navigate(`/cases/${id}/${target}`);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [autoAdvanceEvent, clearAutoAdvanceEvent, id, navigate]);
+
+  const showCheckpoint = !!hitlEvent;
+  const toastMessage = autoAdvanceEvent
+    ? `${capitalize(autoAdvanceEvent.from)} complete · advancing to ${capitalize(autoAdvanceEvent.to)}`
+    : null;
 
   const handleRunResearch = async () => { if (!id) return; clearLogs(); await triggerAgent(id, 'research'); };
   const handleApprove = async () => {
     if (!id) return;
     const { nextStage } = await api.approve(id, 'research', 'approve');
-    setShowCheckpoint(false);
+    clearHITLEvent();
     navigate(`/cases/${id}/${nextStage}`);
   };
 
@@ -42,8 +71,8 @@ export default function CaseResearch() {
   // for older runs / partial data.
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Compiler can't trace the prose-parser heuristic; manual memo is correct
   const citations: Citation[] = useMemo(() => {
-    const completeLog = [...logs].reverse().find((l) => l.type === 'complete');
-    const typed = parseResearchFromMetadata(completeLog?.metadata);
+    const evt = [...logs].reverse().find((l) => l.type === 'auto_advance' || l.type === 'hitl_required');
+    const typed = parseResearchFromMetadata(evt?.metadata);
     if (typed && typed.findings.length > 0) {
       return typed.findings.map((f) => ({
         id: f.id,
@@ -130,11 +159,14 @@ export default function CaseResearch() {
           stage="research"
           summary={`Research complete — ${findings.length} attack patterns identified.`}
           findings={findings}
+          triggers={hitlEvent?.triggers}
           onApprove={handleApprove}
-          onRevise={async (notes) => { clearLogs(); await triggerAgent(id!, 'research', notes); setShowCheckpoint(false); }}
-          onReject={() => setShowCheckpoint(false)}
+          onRevise={async (notes) => { clearLogs(); clearHITLEvent(); await triggerAgent(id!, 'research', notes); }}
+          onReject={clearHITLEvent}
         />
       )}
+
+      <PatternCToast message={toastMessage} />
     </div>
   );
 }
