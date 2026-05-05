@@ -14,34 +14,36 @@ enum UserRole {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         UserRole @default(operator)
-  cases        Case[]
-  createdAt    DateTime @default(now()) @map("created_at")
+  id                  String   @id @default(uuid())
+  name                String
+  email               String   @unique
+  passwordHash        String   @map("password_hash")
+  role                UserRole @default(operator)
+  canRequestAdminView Boolean  @default(false) @map("can_request_admin_view")
+  cases               Case[]
+  createdAt           DateTime @default(now()) @map("created_at")
 
   @@map("users")
 }
 
 model Case {
-  id             String      @id @default(uuid())
-  name           String
-  caseType       String?     @map("case_type")
-  reportType     String?     @map("report_type")
-  jurisdiction   String?
-  opposingExpert String?     @map("opposing_expert")
-  deadline       DateTime?
-  stage          String      @default("intake")
-  createdBy      String      @map("created_by")
-  creator        User        @relation(fields: [createdBy], references: [id])
-  documents      Document[]
-  notes          Note[]
-  agentLogs      AgentLog[]
-  report         Report?
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
+  id                String      @id @default(uuid())
+  name              String
+  caseType          String?     @map("case_type")
+  reportType        String?     @map("report_type")
+  jurisdiction      String?
+  opposingExpert    String?     @map("opposing_expert")
+  deadline          DateTime?
+  stage             String      @default("intake")
+  patternCOverride  Json?       @map("pattern_c_override")
+  createdBy         String      @map("created_by")
+  creator           User        @relation(fields: [createdBy], references: [id])
+  documents         Document[]
+  notes             Note[]
+  agentLogs         AgentLog[]
+  report            Report?
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
 
   @@map("cases")
 }

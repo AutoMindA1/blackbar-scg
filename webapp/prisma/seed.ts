@@ -35,6 +35,7 @@ async function upsertUser(opts: {
   name: string;
   role: UserRole;
   passwordHash: string;
+  canRequestAdminView?: boolean;
 }) {
   await prisma.user.upsert({
     where: { email: opts.email },
@@ -42,12 +43,14 @@ async function upsertUser(opts: {
       name: opts.name,
       role: opts.role,
       passwordHash: opts.passwordHash,
+      canRequestAdminView: opts.canRequestAdminView ?? false,
     },
     create: {
       email: opts.email,
       name: opts.name,
       role: opts.role,
       passwordHash: opts.passwordHash,
+      canRequestAdminView: opts.canRequestAdminView ?? false,
     },
   });
   console.log(`✓ ${opts.email} (${opts.role})`);
@@ -67,6 +70,7 @@ async function main() {
     name: 'Lane Swainston',
     role: UserRole.expert,
     passwordHash: laneHash,
+    canRequestAdminView: true,
   });
 
   await upsertUser({
