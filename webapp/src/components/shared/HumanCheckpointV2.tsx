@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Check, RotateCcw, X } from 'lucide-react';
+import { Check, RotateCcw, X, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BearMark from './BearMark';
 import { useAuthStore } from '../../stores/authStore';
+import { TRIGGER_LABEL, hasVoiceGuard, triggerDetailLine } from '../../lib/patternC';
+import type { PatternCTrigger } from '../../lib/patternC';
 
 interface Finding {
   id: string;
@@ -17,6 +19,9 @@ interface HumanCheckpointV2Props {
   findings?: Finding[];
   qaScore?: number;
   documentCount?: number;
+  /** Pattern C triggers that fired for this stage. When T9 (voice guard) is in
+   *  the list, the modal locks out Approve and shows Reject only. */
+  triggers?: PatternCTrigger[];
   onApprove: () => void;
   onRevise: (notes: string) => void;
   onReject: () => void;
@@ -51,6 +56,7 @@ export default function HumanCheckpointV2({
   findings,
   qaScore,
   documentCount,
+  triggers,
   onApprove,
   onRevise,
   onReject,
@@ -59,6 +65,7 @@ export default function HumanCheckpointV2({
   const [mode, setMode] = useState<'actions' | 'revise'>('actions');
   const [notes, setNotes] = useState('');
   const [approving, setApproving] = useState(false);
+  const voiceGuardLocked = hasVoiceGuard(triggers);
 
   const handleApprove = () => {
     setApproving(true);
@@ -139,6 +146,36 @@ export default function HumanCheckpointV2({
             {/* QA gauge when score present */}
             {qaScore !== undefined && <ScoreGauge score={qaScore} />}
 
+            {/* Pattern C triggers — pills + per-trigger detail. Surfaced only
+                when at least one fired (no triggers ⇔ this modal shouldn't
+                have opened anyway, but render-safe). */}
+            {triggers && triggers.length > 0 && (
+              <div className="mb-6">
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {triggers.map((t) => (
+                    <span
+                      key={t.type}
+                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium font-mono tracking-wider bg-[var(--signal-amber-soft)] text-[var(--signal-amber)] border border-[var(--signal-amber-border)]"
+                      title={t.reason}
+                    >
+                      {t.type} · {TRIGGER_LABEL[t.type]}
+                    </span>
+                  ))}
+                </div>
+                <ul
+                  className="text-xs text-[var(--color-text-secondary)] space-y-1.5 pl-3"
+                  style={{ borderLeft: '2px solid var(--signal-amber-border)' }}
+                >
+                  {triggers.map((t) => (
+                    <li key={t.type}>
+                      <span className="font-mono text-[10px] text-[var(--signal-amber)] mr-2">{t.type}</span>
+                      {triggerDetailLine(t)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Findings list */}
             {findings && findings.length > 0 && (
               <div className="mb-6 space-y-2 max-h-48 overflow-y-auto">
@@ -168,8 +205,31 @@ export default function HumanCheckpointV2({
               </div>
             )}
 
-            {/* Actions */}
-            {mode === 'actions' ? (
+            {/* Actions — voice-guard lockdown removes the Approve path entirely
+                per ADMIN-PANEL-SPEC.md hard rule (T9 requires Caleb approval,
+                no auto-approve). Reject is the only outbound action. */}
+            {voiceGuardLocked ? (
+              <div className="space-y-3">
+                <div
+                  className="flex items-start gap-2 px-3 py-2 rounded-lg text-xs"
+                  style={{
+                    background: 'var(--signal-amber-soft)',
+                    border: '1px solid var(--signal-amber-border)',
+                    color: 'var(--signal-amber)',
+                  }}
+                >
+                  <ShieldAlert size={14} className="shrink-0 mt-0.5" />
+                  <span>VOICE GUARD active — Caleb approval required. No auto-approve path from this surface.</span>
+                </div>
+                <button
+                  onClick={onReject}
+                  className="v2-btn v2-btn-ghost flex items-center justify-center gap-2 w-full py-3 font-medium rounded-xl transition-all"
+                >
+                  <X size={16} />
+                  Dismiss
+                </button>
+              </div>
+            ) : mode === 'actions' ? (
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleApprove}

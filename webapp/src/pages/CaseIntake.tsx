@@ -12,10 +12,15 @@ import FileDropzone from '../components/shared/FileDropzone';
 import ImagePreviewModal from '../components/shared/ImagePreviewModal';
 import NoteList from '../components/shared/NoteList';
 import CaseForm from '../components/shared/CaseForm';
+import PatternCToast from '../components/shared/PatternCToast';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
 import { api, parseIntakeFromMetadata } from '../lib/api';
 import type { Doc } from '../lib/api';
+
+function capitalize(s: string): string {
+  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
+}
 
 const IMAGE_EXTS = /\.(png|jpg|jpeg|gif|webp|bmp|tiff?)$/i;
 function isImageDoc(doc: Doc): boolean { return IMAGE_EXTS.test(doc.filename); }
@@ -92,14 +97,43 @@ export default function CaseIntake() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { activeCase, fetchCase } = useCaseStore();
-  const { logs, status, connectSSE, disconnectSSE, triggerAgent, clearLogs } = useAgentStore();
+  const {
+    logs,
+    status,
+    connectSSE,
+    disconnectSSE,
+    triggerAgent,
+    clearLogs,
+    autoAdvanceEvent,
+    hitlEvent,
+    clearAutoAdvanceEvent,
+    clearHITLEvent,
+  } = useAgentStore();
   const [uploading, setUploading] = useState(false);
-  const [showCheckpoint, setShowCheckpoint] = useState(false);
   const [previewPhotoIndex, setPreviewPhotoIndex] = useState<number | null>(null);
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (status === 'complete') setShowCheckpoint(true); }, [status]);
+
+  // Pattern C — auto-advance fires a 4s toast then programmatic navigate.
+  // Timer + navigate are async, so this effect doesn't trip the
+  // react-hooks/set-state-in-effect rule. Cleanup cancels the timer if the
+  // event clears (e.g. user navigated away or a new agent run started).
+  useEffect(() => {
+    if (!autoAdvanceEvent || !id) return;
+    const target = autoAdvanceEvent.to;
+    const timer = setTimeout(() => {
+      clearAutoAdvanceEvent();
+      navigate(`/cases/${id}/${target}`);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [autoAdvanceEvent, clearAutoAdvanceEvent, id, navigate]);
+
+  // showCheckpoint and toastMessage are derived from agentStore events — no
+  // sync setState in effect, no lint suppression needed.
+  const showCheckpoint = !!hitlEvent;
+  const toastMessage = autoAdvanceEvent
+    ? `${capitalize(autoAdvanceEvent.from)} complete · advancing to ${capitalize(autoAdvanceEvent.to)}`
+    : null;
 
   const handleFiles = useCallback(async (files: File[]) => {
     if (!id) return;
@@ -125,7 +159,7 @@ export default function CaseIntake() {
   const handleApprove = async () => {
     if (!id) return;
     const { nextStage } = await api.approve(id, 'intake', 'approve');
-    setShowCheckpoint(false);
+    clearHITLEvent();
     navigate(`/cases/${id}/${nextStage}`);
   };
 
@@ -133,9 +167,16 @@ export default function CaseIntake() {
     if (!id) return;
     await api.approve(id, 'intake', 'revise', notes);
     clearLogs();
+    clearHITLEvent();
     await triggerAgent(id, 'intake', notes);
-    setShowCheckpoint(false);
   };
+
+  const superviseClosely = activeCase?.patternCOverride?.superviseClosely ?? false;
+  const handleSuperviseToggle = useCallback(async () => {
+    if (!id) return;
+    await api.updatePatternCOverride(id, { superviseClosely: !superviseClosely });
+    await fetchCase(id);
+  }, [id, superviseClosely, fetchCase]);
 
   const stageNavigate = (stage: string) => navigate(`/cases/${id}/${stage}`);
 
@@ -205,6 +246,21 @@ export default function CaseIntake() {
       <Header
         title={activeCase.name}
         subtitle={`${activeCase.reportType || 'Initial'} Report — ${activeCase.jurisdiction || 'Clark County'}`}
+        action={
+          <button
+            onClick={handleSuperviseToggle}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              superviseClosely
+                ? 'bg-[var(--signal-amber-soft)] text-[var(--signal-amber)] border border-[var(--signal-amber-border)]'
+                : 'text-[var(--color-text-muted)] border border-[var(--color-border)] hover:text-[var(--color-text-primary)]'
+            }`}
+            aria-pressed={superviseClosely}
+            title="When on, every agent stage opens the approval modal regardless of confidence (Pattern A for this case)."
+          >
+            <Eye size={12} />
+            Supervise closely
+          </button>
+        }
       />
       <StageNavV2
         currentStage={(activeCase.stage || 'intake') as 'intake' | 'research' | 'drafting' | 'qa' | 'export'}
@@ -311,18 +367,22 @@ export default function CaseIntake() {
         />
       )}
 
-      {/* Human Checkpoint */}
+      {/* Human Checkpoint — opened by Pattern C `hitl_required` events. */}
       {showCheckpoint && (
         <HumanCheckpointV2
           stage="intake"
           summary={checkpointSummary}
           findings={findings}
           documentCount={activeCase.documents.length}
+          triggers={hitlEvent?.triggers}
           onApprove={handleApprove}
           onRevise={handleRevise}
-          onReject={() => setShowCheckpoint(false)}
+          onReject={clearHITLEvent}
         />
       )}
+
+      {/* Pattern C auto-advance toast — 4s, parent-owned timer above. */}
+      <PatternCToast message={toastMessage} />
     </div>
   );
 }

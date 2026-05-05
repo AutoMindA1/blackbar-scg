@@ -1,3 +1,5 @@
+import type { PatternCOverride } from './patternC';
+
 const API_BASE = '/api';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -34,6 +36,11 @@ export const api = {
     request<CaseDetail>('/cases', { method: 'POST', body: JSON.stringify(data) }),
   updateCase: (id: string, data: Record<string, unknown>) =>
     request<CaseDetail>(`/cases/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  updatePatternCOverride: (id: string, override: PatternCOverride) =>
+    request<{ id: string; patternCOverride: PatternCOverride | null }>(
+      `/cases/${id}/pattern-c-override`,
+      { method: 'PATCH', body: JSON.stringify(override) },
+    ),
 
   // Notes
   getNotes: (caseId: string) =>
@@ -106,6 +113,7 @@ export interface CaseDetail {
   id: string; name: string; caseType: string | null; reportType: string | null;
   jurisdiction: string | null; opposingExpert: string | null; deadline: string | null;
   stage: string; createdAt: string; updatedAt: string;
+  patternCOverride: PatternCOverride | null;
   documents: Doc[]; agentLogs: AgentLog[]; report: ReportData | null;
 }
 

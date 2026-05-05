@@ -90,4 +90,48 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
   res.json(c);
 });
 
+// PATCH /api/cases/:id/pattern-c-override — additive merge into Case.patternCOverride.
+// Per HITL-PATTERN-C-SPEC.md §Configuration: Mariz can flip superviseClosely from
+// the case header; admins can also tune per-stage thresholds via the same endpoint.
+const patternCOverrideSchema = z
+  .object({
+    superviseClosely: z.boolean().optional(),
+    intakeConfidenceThreshold: z.number().min(0).max(1).optional(),
+    researchConfidenceThreshold: z.number().min(0).max(1).optional(),
+    draftingConfidenceThreshold: z.number().min(0).max(1).optional(),
+    qaPassThreshold: z.number().min(0).max(100).optional(),
+    voiceDriftThreshold: z.number().min(0).max(1).optional(),
+  })
+  .strict();
+
+router.patch('/:id/pattern-c-override', async (req: AuthRequest, res: Response) => {
+  if (!caseIdParam.safeParse(req.params.id).success) {
+    res.status(400).json({ error: 'Invalid case ID' });
+    return;
+  }
+  const parsed = patternCOverrideSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
+    return;
+  }
+  const existing = await prisma.case.findUnique({
+    where: { id: req.params.id },
+    select: { patternCOverride: true },
+  });
+  if (!existing) {
+    res.status(404).json({ error: 'Case not found' });
+    return;
+  }
+  const merged = {
+    ...((existing.patternCOverride as Record<string, unknown> | null) ?? {}),
+    ...parsed.data,
+  };
+  const updated = await prisma.case.update({
+    where: { id: req.params.id },
+    data: { patternCOverride: merged },
+    select: { id: true, patternCOverride: true },
+  });
+  res.json(updated);
+});
+
 export default router;
