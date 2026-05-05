@@ -14,14 +14,15 @@ enum UserRole {
 }
 
 model User {
-  id                  String   @id @default(uuid())
+  id                  String     @id @default(uuid())
   name                String
-  email               String   @unique
-  passwordHash        String   @map("password_hash")
-  role                UserRole @default(operator)
-  canRequestAdminView Boolean  @default(false) @map("can_request_admin_view")
+  email               String     @unique
+  passwordHash        String     @map("password_hash")
+  role                UserRole   @default(operator)
+  canRequestAdminView Boolean    @default(false) @map("can_request_admin_view")
   cases               Case[]
-  createdAt           DateTime @default(now()) @map("created_at")
+  auditLogs           AuditLog[]
+  createdAt           DateTime   @default(now()) @map("created_at")
 
   @@map("users")
 }
@@ -98,4 +99,20 @@ model Report {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("reports")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String   @map("actor_id")
+  actor     User     @relation(fields: [actorId], references: [id])
+  action    String
+  target    String
+  reason    String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_log")
 }
