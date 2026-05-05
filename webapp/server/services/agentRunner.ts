@@ -474,24 +474,12 @@ export async function runAgent(
       );
     }
 
-    // Broadcast completion (legacy event — kept for compat; PR 5.1 will retire
-    // it once the frontend has migrated to auto_advance / hitl_required).
-    broadcast(broadcastFn, caseId, stage, 'complete',
-      qaScorecard
-        ? `${capitalize(stage)} complete — ${qaScorecard.score}/100`
-        : `${capitalize(stage)} complete — ${findingCount} findings identified`,
-      {
-        findingCount,
-        tokenUsage: finalMessage.usage,
-        ...(qaScorecard ? { qa: qaScorecard } : {}),
-        ...(parsedTyped ? { parsed: parsedTyped } : {}),
-      },
-    );
-
-    // Pattern C — HITL routing. Emit auto_advance OR hitl_required so the
-    // frontend (PR 5) can show a silent toast vs. the approval modal.
-    // T1/T2/T5/T9/T10 detectors aren't wired yet; their inputs default false
-    // here. T3 (AGENT BLIND) and T4 (QA pass) and T6 (Lane Gate) are live.
+    // Pattern C — HITL routing. Emit auto_advance OR hitl_required as the
+    // sole stage-completion signal to the frontend. Both event types carry
+    // the parsed agent output + token usage so consumers (CaseIntake, agent
+    // activity feed) don't need a separate `complete` broadcast. The DB
+    // log row at type='complete' (persisted above) is unchanged — it serves
+    // the audit / replay path, not the live UI.
     try {
       const patternCStage = stage as 'intake' | 'research' | 'drafting' | 'qa';
       const pcResult = await evaluatePatternCForCase(caseId, patternCStage, {
@@ -500,10 +488,18 @@ export async function runAgent(
         agentError: false,
       });
 
+      const sharedPayload = {
+        findingCount,
+        tokenUsage: finalMessage.usage,
+        ...(qaScorecard ? { qa: qaScorecard } : {}),
+        ...(parsedTyped ? { parsed: parsedTyped } : {}),
+      };
+
       if (pcResult.autoAdvance) {
         broadcast(broadcastFn, caseId, stage, 'auto_advance',
           `${capitalize(stage)} complete — advancing to next stage`,
           {
+            ...sharedPayload,
             from: stage,
             to: nextStageOf(patternCStage),
             triggers: [],
@@ -513,16 +509,35 @@ export async function runAgent(
         broadcast(broadcastFn, caseId, stage, 'hitl_required',
           `${capitalize(stage)} complete — review required`,
           {
+            ...sharedPayload,
             stage,
             triggers: pcResult.triggers,
-            ...(qaScorecard ? { qa: qaScorecard } : {}),
-            ...(parsedTyped ? { parsed: parsedTyped } : {}),
           },
         );
       }
     } catch (pcErr) {
       console.error('[agentRunner] Pattern C evaluation failed (non-fatal):', pcErr);
-      // Frontend still has the legacy `complete` event above; pipeline continues.
+      // Fall back to a synthetic hitl_required so the user sees a checkpoint
+      // instead of a stranded UI. We piggy-back on T8 (agent error) since
+      // Pattern C throwing is itself an error condition the user should
+      // resolve manually. No legacy `complete` broadcast — the SSE stream
+      // emits exclusively auto_advance / hitl_required from this point on.
+      broadcast(broadcastFn, caseId, stage, 'hitl_required',
+        `${capitalize(stage)} complete — Pattern C evaluator failed, manual review required`,
+        {
+          findingCount,
+          tokenUsage: finalMessage.usage,
+          ...(qaScorecard ? { qa: qaScorecard } : {}),
+          ...(parsedTyped ? { parsed: parsedTyped } : {}),
+          stage,
+          triggers: [
+            {
+              type: 'T8',
+              reason: 'Pattern C evaluator threw an error — manual review required',
+            },
+          ],
+        },
+      );
     }
 
   } catch (err) {

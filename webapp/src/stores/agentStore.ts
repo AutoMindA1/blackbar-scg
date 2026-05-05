@@ -39,8 +39,11 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     get().disconnectSSE();
     const es = createSSE(caseId, (msg) => {
       set((s) => ({ logs: [...s.logs, msg] }));
-      if (msg.type === 'complete') set({ status: 'complete' });
       if (msg.type === 'error') set({ status: 'error' });
+      // Stage completion is signalled exclusively by Pattern C events.
+      if (msg.type === 'auto_advance' || msg.type === 'hitl_required') {
+        set({ status: 'complete' });
+      }
       if (msg.type === 'auto_advance') {
         set({
           autoAdvanceEvent: {

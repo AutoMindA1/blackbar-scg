@@ -194,8 +194,11 @@ export default function CaseIntake() {
     }));
 
   const intakeResult = useMemo(() => {
-    const completeLog = [...logs].reverse().find((l) => l.type === 'complete');
-    return parseIntakeFromMetadata(completeLog?.metadata);
+    // Stage outputs ride exclusively on auto_advance / hitl_required events.
+    const evt = [...logs]
+      .reverse()
+      .find((l) => l.type === 'auto_advance' || l.type === 'hitl_required');
+    return parseIntakeFromMetadata(evt?.metadata);
   }, [logs]);
 
   const { data: notesData } = useQuery({
