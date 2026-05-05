@@ -41,14 +41,28 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     return;
   }
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '24h' });
-  res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      role: user.role,
+      canRequestAdminView: user.canRequestAdminView,
+    },
+  });
 });
 
 // GET /api/auth/me
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   const user = await prisma.user.findUnique({ where: { id: req.userId } });
   if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-  res.json({ id: user.id, name: user.name, role: user.role, email: user.email });
+  res.json({
+    id: user.id,
+    name: user.name,
+    role: user.role,
+    email: user.email,
+    canRequestAdminView: user.canRequestAdminView,
+  });
 });
 
 export default router;

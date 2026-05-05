@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { PenTool } from 'lucide-react';
 import Header from '../components/layout/Header';
 import StageNavV2 from '../components/shared/StageNavV2';
 import AgentActivityFeedV2 from '../components/shared/AgentActivityFeedV2';
@@ -11,6 +12,7 @@ import CheckResults from '../components/shared/CheckResults';
 import IssuesList from '../components/shared/IssuesList';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
+import { useAuthStore } from '../stores/authStore';
 import { api } from '../lib/api';
 import type { QAScorecard } from '../lib/api';
 
@@ -61,6 +63,17 @@ export default function CaseQA() {
     navigate(`/cases/${id}/${nextStage}`);
   };
 
+  // Lane (expert) signs at QA passing — attaches his credentials via the
+  // existing approve endpoint (auth middleware records actor) and routes to
+  // export. Mariz still has the Approve button inside the modal; only Lane
+  // gets this top-level CTA per MARIZ-SURFACE-SPEC.md §What Lane sees.
+  const userRole = useAuthStore((s) => s.user?.role);
+  const handleSignAndShip = async () => {
+    if (!id) return;
+    const { nextStage } = await api.approve(id, 'qa', 'approve');
+    navigate(`/cases/${id}/${nextStage}`);
+  };
+
   const stageOrder = ['intake', 'research', 'drafting', 'qa', 'export'];
   const currentIdx = stageOrder.indexOf(activeCase?.stage || 'qa');
   const completedStages = stageOrder.slice(0, currentIdx);
@@ -77,6 +90,7 @@ export default function CaseQA() {
   const issues = effectiveScorecard?.issues ?? [];
   const passCount = checks.filter((c) => c.status === 'pass').length;
   const hasScorecard = effectiveScorecard !== null;
+  const canSignAndShip = userRole === 'expert' && hasScorecard && score >= 70;
 
   return (
     <div className="page-enter">
@@ -96,6 +110,24 @@ export default function CaseQA() {
             running={status === 'running'}
             actionSlot={<ContextualActionButton stage="qa" status={status} onAction={handleRunQA} />}
           />
+          {canSignAndShip && (
+            <div
+              className="v2-surface rounded-2xl p-6 text-center"
+              style={{ border: '1px solid var(--signal-amber-border)' }}
+            >
+              <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">Ready to ship</p>
+              <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                QA passed at {score}/100. Signing attaches your credentials and routes the report to export.
+              </p>
+              <button
+                onClick={handleSignAndShip}
+                className="v2-btn v2-btn-primary inline-flex items-center gap-2 px-6 py-3 font-semibold rounded-xl"
+              >
+                <PenTool size={16} />
+                Sign &amp; ship
+              </button>
+            </div>
+          )}
           {hasScorecard && checks.length > 0 && <CheckResults checks={checks} />}
           {hasScorecard && issues.length > 0 && <IssuesList issues={issues} />}
         </div>

@@ -1,5 +1,5 @@
 import { Check, Scale } from 'lucide-react';
-import { useAuthStore } from '../../stores/authStore';
+import { useEffectiveAdmin } from '../../stores/adminViewStore';
 
 interface StageNavV2Props {
   currentStage: 'intake' | 'research' | 'drafting' | 'qa' | 'export';
@@ -18,7 +18,7 @@ const stages = [
 ] as const;
 
 export default function StageNavV2({ currentStage, completedStages, agentRunning, onNavigate }: StageNavV2Props) {
-  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  const isAdmin = useEffectiveAdmin();
   if (!isAdmin) return null;
 
   return (

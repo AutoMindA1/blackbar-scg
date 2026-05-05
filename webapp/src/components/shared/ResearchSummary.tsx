@@ -1,6 +1,6 @@
 import { Scale, Target } from 'lucide-react';
 import type { Citation } from './CitationCard';
-import { useAuthStore } from '../../stores/authStore';
+import { useEffectiveAdmin } from '../../stores/adminViewStore';
 
 interface ResearchSummaryProps {
   citations: Citation[];
@@ -22,7 +22,7 @@ const DEFAULT_ATK_LABELS: Record<string, string> = {
 };
 
 export default function ResearchSummary({ citations, attackLabels = DEFAULT_ATK_LABELS }: ResearchSummaryProps) {
-  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  const isAdmin = useEffectiveAdmin();
 
   // Tally attack patterns referenced in any finding
   const tally = new Map<string, number>();

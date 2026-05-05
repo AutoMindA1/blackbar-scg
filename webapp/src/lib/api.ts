@@ -24,10 +24,22 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   // Auth
   login: (email: string, password: string) =>
-    request<{ token: string; user: { id: string; name: string; role: string } }>('/auth/login', {
+    request<{
+      token: string;
+      user: { id: string; name: string; role: string; canRequestAdminView: boolean };
+    }>('/auth/login', {
       method: 'POST', body: JSON.stringify({ email, password }),
     }),
-  me: () => request<{ id: string; name: string; role: string; email: string }>('/auth/me'),
+  me: () =>
+    request<{ id: string; name: string; role: string; email: string; canRequestAdminView: boolean }>(
+      '/auth/me',
+    ),
+
+  // Admin view (expert toggle / admin self-grant)
+  toggleAdminView: (enabled: boolean) =>
+    request<{ enabled: boolean }>('/admin-view/toggle', {
+      method: 'POST', body: JSON.stringify({ enabled }),
+    }),
 
   // Cases
   getCases: () => request<{ cases: CaseSummary[] }>('/cases'),

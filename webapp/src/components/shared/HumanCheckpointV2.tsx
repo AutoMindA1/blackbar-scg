@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Check, RotateCcw, X, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BearMark from './BearMark';
-import { useAuthStore } from '../../stores/authStore';
+import { useEffectiveAdmin } from '../../stores/adminViewStore';
 import { TRIGGER_LABEL, hasVoiceGuard, triggerDetailLine } from '../../lib/patternC';
 import type { PatternCTrigger } from '../../lib/patternC';
 
@@ -61,7 +61,7 @@ export default function HumanCheckpointV2({
   onRevise,
   onReject,
 }: HumanCheckpointV2Props) {
-  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  const isAdmin = useEffectiveAdmin();
   const [mode, setMode] = useState<'actions' | 'revise'>('actions');
   const [notes, setNotes] = useState('');
   const [approving, setApproving] = useState(false);

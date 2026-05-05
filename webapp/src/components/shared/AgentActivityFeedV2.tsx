@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search, Check, AlertTriangle, Loader2, Activity, ArrowDown } from 'lucide-react';
 import BearMark from './BearMark';
-import { useAuthStore } from '../../stores/authStore';
+import { useEffectiveAdmin } from '../../stores/adminViewStore';
 import type { SSEMessage } from '../../lib/api';
 
 interface AgentActivityFeedV2Props {
@@ -37,7 +37,7 @@ function renderMessage(message: string) {
 }
 
 export default function AgentActivityFeedV2({ logs, status }: AgentActivityFeedV2Props) {
-  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  const isAdmin = useEffectiveAdmin();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [startTime] = useState(() => Date.now());

@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { api } from '../lib/api';
 
-interface User { id: string; name: string; role: string; }
+interface User {
+  id: string;
+  name: string;
+  role: string;
+  canRequestAdminView: boolean;
+}
 
 interface AuthState {
   user: User | null;
@@ -11,6 +16,8 @@ interface AuthState {
   logout: () => void;
   checkAuth: () => Promise<void>;
 }
+
+const ADMIN_VIEW_STORAGE_KEY = 'bb_admin_view';
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
@@ -25,6 +32,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     localStorage.removeItem('bb_token');
+    // Admin-view toggle is session-scoped — clear on explicit logout.
+    try { sessionStorage.removeItem(ADMIN_VIEW_STORAGE_KEY); } catch { /* ignore */ }
     set({ token: null, user: null, loading: false });
   },
 
@@ -33,9 +42,19 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (!token) { set({ loading: false }); return; }
     try {
       const user = await api.me();
-      set({ user: { id: user.id, name: user.name, role: user.role }, token, loading: false });
+      set({
+        user: {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          canRequestAdminView: user.canRequestAdminView,
+        },
+        token,
+        loading: false,
+      });
     } catch {
       localStorage.removeItem('bb_token');
+      try { sessionStorage.removeItem(ADMIN_VIEW_STORAGE_KEY); } catch { /* ignore */ }
       set({ token: null, user: null, loading: false });
     }
   },

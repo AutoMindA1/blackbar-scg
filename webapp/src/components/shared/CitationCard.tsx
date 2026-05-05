@@ -1,5 +1,5 @@
 import { BookOpen, Quote } from 'lucide-react';
-import { useAuthStore } from '../../stores/authStore';
+import { useEffectiveAdmin } from '../../stores/adminViewStore';
 
 export interface Citation {
   id: string;
@@ -20,7 +20,7 @@ interface CitationCardProps {
 }
 
 export default function CitationCard({ citation }: CitationCardProps) {
-  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  const isAdmin = useEffectiveAdmin();
 
   return (
     <div className="glass rounded-xl p-5 space-y-3 card-hover">
