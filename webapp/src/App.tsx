@@ -10,6 +10,7 @@ import CaseDrafting from './pages/CaseDrafting';
 import CaseQA from './pages/CaseQA';
 import CaseExport from './pages/CaseExport';
 import NotFound from './pages/NotFound';
+import Forbidden from './pages/Forbidden';
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
@@ -19,6 +20,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/403" element={<Forbidden />} />
         <Route element={<AppShell />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/cases" element={<Dashboard />} />
