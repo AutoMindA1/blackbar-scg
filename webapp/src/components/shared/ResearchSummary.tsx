@@ -1,5 +1,6 @@
 import { Scale, Target } from 'lucide-react';
 import type { Citation } from './CitationCard';
+import { useAuthStore } from '../../stores/authStore';
 
 interface ResearchSummaryProps {
   citations: Citation[];
@@ -21,6 +22,8 @@ const DEFAULT_ATK_LABELS: Record<string, string> = {
 };
 
 export default function ResearchSummary({ citations, attackLabels = DEFAULT_ATK_LABELS }: ResearchSummaryProps) {
+  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+
   // Tally attack patterns referenced in any finding
   const tally = new Map<string, number>();
   for (const c of citations) {
@@ -45,17 +48,19 @@ export default function ResearchSummary({ citations, attackLabels = DEFAULT_ATK_
         <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Research Summary</h3>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
         <div className="bg-[var(--color-bg-elevated)] rounded-xl p-3">
           <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">Findings</p>
           <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">{citations.length}</p>
         </div>
-        <div className="bg-[var(--color-bg-elevated)] rounded-xl p-3">
-          <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">Avg Confidence</p>
-          <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
-            {avgConfidence !== null ? `${avgConfidence}%` : '—'}
-          </p>
-        </div>
+        {isAdmin && (
+          <div className="bg-[var(--color-bg-elevated)] rounded-xl p-3">
+            <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">Avg Confidence</p>
+            <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">
+              {avgConfidence !== null ? `${avgConfidence}%` : '—'}
+            </p>
+          </div>
+        )}
       </div>
 
       {topPatterns.length > 0 && (

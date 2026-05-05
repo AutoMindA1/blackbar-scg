@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, RotateCcw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BearMark from './BearMark';
+import { useAuthStore } from '../../stores/authStore';
 
 interface Finding {
   id: string;
@@ -54,6 +55,7 @@ export default function HumanCheckpointV2({
   onRevise,
   onReject,
 }: HumanCheckpointV2Props) {
+  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
   const [mode, setMode] = useState<'actions' | 'revise'>('actions');
   const [notes, setNotes] = useState('');
   const [approving, setApproving] = useState(false);
@@ -156,7 +158,7 @@ export default function HumanCheckpointV2({
                       </span>
                     )}
                     <span className="text-sm text-[var(--color-text-secondary)] flex-1">{f.message}</span>
-                    {f.confidence !== undefined && (
+                    {isAdmin && f.confidence !== undefined && (
                       <span className="shrink-0 text-xs font-mono text-[var(--color-info)]">
                         {Math.round(f.confidence * 100)}%
                       </span>

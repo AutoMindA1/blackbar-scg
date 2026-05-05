@@ -1,4 +1,5 @@
 import { Check, Scale } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
 
 interface StageNavV2Props {
   currentStage: 'intake' | 'research' | 'drafting' | 'qa' | 'export';
@@ -17,6 +18,9 @@ const stages = [
 ] as const;
 
 export default function StageNavV2({ currentStage, completedStages, agentRunning, onNavigate }: StageNavV2Props) {
+  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+  if (!isAdmin) return null;
+
   return (
     <nav className="flex items-center gap-1 px-4 py-3">
       {stages.map((stage, i) => {

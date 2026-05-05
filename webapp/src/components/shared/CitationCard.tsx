@@ -1,4 +1,5 @@
 import { BookOpen, Quote } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
 
 export interface Citation {
   id: string;
@@ -19,6 +20,8 @@ interface CitationCardProps {
 }
 
 export default function CitationCard({ citation }: CitationCardProps) {
+  const isAdmin = useAuthStore((s) => s.user?.role === 'admin');
+
   return (
     <div className="glass rounded-xl p-5 space-y-3 card-hover">
       <div className="flex items-center justify-between gap-2">
@@ -27,7 +30,7 @@ export default function CitationCard({ citation }: CitationCardProps) {
             {citation.attackPattern || citation.reference}
           </span>
         )}
-        {citation.confidence !== undefined && (
+        {isAdmin && citation.confidence !== undefined && (
           <span className="text-xs font-mono text-[var(--color-info)]">
             {Math.round(citation.confidence * 100)}%
           </span>
