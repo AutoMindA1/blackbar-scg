@@ -13,6 +13,7 @@ import noteRoutes from './routes/notes.js';
 import agentRoutes from './routes/agents.js';
 import reportRoutes from './routes/reports.js';
 import adminViewRoutes from './routes/adminView.js';
+import pipelineRoutes from './routes/pipeline.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -68,6 +69,7 @@ app.use('/api/cases', noteRoutes);       // POST /:id/notes, GET /:id/notes, DEL
 app.use('/api/cases', agentRoutes);      // POST /:id/agents/:stage, GET /:id/agents/stream, POST /:id/approve
 app.use('/api/cases', reportRoutes);     // GET /:id/report, PUT /:id/report, POST /:id/export
 app.use('/api/admin-view', adminViewRoutes); // POST /toggle
+app.use('/api/pipeline', pipelineRoutes); // POST /:caseId/start, GET /:caseId/state, POST /:caseId/approve, POST /:caseId/override
 
 app.get('/api/health', (_req, res) => res.json({
   status: 'ok',
