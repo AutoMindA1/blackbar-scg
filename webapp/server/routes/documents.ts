@@ -7,18 +7,25 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { AuthRequest, authMiddleware } from '../middleware/auth.js';
 
-// pdf-parse is CJS — use dynamic import to keep it out of the ESM hot path
+// pdf-parse v2 dropped the v1 default-function export and ships a `PDFParse`
+// class with `.getInfo()` returning an `InfoResult` whose `total` is the
+// page count. The prior shim (`mod.default ?? mod`) was for v1; v2 has
+// neither shape, hence the runtime "pdfParse is not a function" error.
 async function extractPdfPageCount(filepath: string): Promise<number | null> {
+  let parser: { destroy: () => Promise<void> } | null = null;
   try {
-    const mod = await import('pdf-parse');
-    const pdfParse = (mod as { default?: (b: Buffer) => Promise<{ numpages: number }> }).default
-      ?? (mod as unknown as (b: Buffer) => Promise<{ numpages: number }>);
+    const { PDFParse } = await import('pdf-parse');
     const buf = await fs.readFile(filepath);
-    const data = await pdfParse(buf);
-    return typeof data.numpages === 'number' ? data.numpages : null;
+    parser = new PDFParse({ data: new Uint8Array(buf) });
+    const info = await (parser as unknown as { getInfo: () => Promise<{ total: number }> }).getInfo();
+    return typeof info.total === 'number' ? info.total : null;
   } catch (err) {
     console.warn(`[documents] pdf-parse failed for ${filepath}:`, err instanceof Error ? err.message : err);
     return null;
+  } finally {
+    if (parser) {
+      try { await parser.destroy(); } catch { /* ignore cleanup errors */ }
+    }
   }
 }
 
