@@ -2,12 +2,13 @@ import heroImg from '../../assets/hero.png';
 
 interface BearMarkProps {
   variant: 'icon' | 'watermark' | 'hero' | 'pulse' | 'glow';
-  size?: 'sm' | 'md' | 'lg' | 'full';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'full';
   opacity?: number;
   className?: string;
 }
 
 const sizeClasses = {
+  xs: 'w-8 h-8',
   sm: 'w-6 h-6',
   md: 'w-12 h-12',
   lg: 'w-24 h-24',

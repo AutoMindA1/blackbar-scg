@@ -9,6 +9,8 @@ import {
   Trash2,
   Loader2,
   ArrowRight,
+  Pencil,
+  X,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import StageNavV2 from '../components/shared/StageNavV2';
@@ -18,8 +20,10 @@ import SkeletonLoader from '../components/shared/SkeletonLoader';
 import ImagePreviewModal from '../components/shared/ImagePreviewModal';
 import BearMark from '../components/shared/BearMark';
 import PatternCToast from '../components/shared/PatternCToast';
+import CaseForm from '../components/shared/CaseForm';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
+import { useAuthStore } from '../stores/authStore';
 import { api, parseIntakeFromMetadata } from '../lib/api';
 import type { Doc, Note } from '../lib/api';
 
@@ -147,6 +151,25 @@ export default function CaseIntake() {
   const [dragOver, setDragOver] = useState(false);
   const [previewPhotoIndex, setPreviewPhotoIndex] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
+  const [showEditDetails, setShowEditDetails] = useState(false);
+
+  const userRole = useAuthStore((s) => s.user?.role);
+  const canEditDetails = userRole === 'expert' || userRole === 'admin';
+
+  const handleSaveDetails = useCallback(async (values: Record<string, unknown>) => {
+    if (!id) return;
+    await api.updateCase(id, values);
+    await fetchCase(id);
+    setShowEditDetails(false);
+  }, [id, fetchCase]);
+
+  // Esc closes the edit-details modal
+  useEffect(() => {
+    if (!showEditDetails) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowEditDetails(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showEditDetails]);
 
   useEffect(() => {
     if (id) { fetchCase(id); connectSSE(id); }
@@ -591,7 +614,7 @@ export default function CaseIntake() {
               onChange={(e) => { if (e.target.files?.length) handleFiles(Array.from(e.target.files)); }}
             />
             <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
-              <BearMark variant="icon" size="md" />
+              <BearMark variant="icon" size="xs" />
             </div>
             <div style={{ color: dragOver ? 'var(--bone)' : 'var(--bone-muted)' }}>
               Drop files, photos, or paste a link.
@@ -609,8 +632,32 @@ export default function CaseIntake() {
 
         {/* Right — case summary + Run Intake CTA + activity (admin) */}
         <aside style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 32 }}>
-          <div className="v2-surface" style={{ padding: '24px' }}>
-            <div className="v2-micro" style={{ marginBottom: 12, color: 'var(--bone-muted)' }}>Case summary</div>
+          <div className="v2-surface" style={{ padding: '24px', position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div className="v2-micro" style={{ color: 'var(--bone-muted)' }}>Case summary</div>
+              {canEditDetails && (
+                <button
+                  onClick={() => setShowEditDetails(true)}
+                  aria-label="Edit case details"
+                  className="v2-focus-ring"
+                  style={{
+                    background: 'transparent',
+                    border: 0,
+                    padding: 4,
+                    color: 'var(--bone-dim)',
+                    cursor: 'pointer',
+                    borderRadius: 'var(--radius-sm)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'color var(--duration-fast) var(--ease-forensic)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--signal-amber)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--bone-dim)'; }}
+                >
+                  <Pencil size={14} />
+                </button>
+              )}
+            </div>
             <h3
               style={{
                 fontFamily: 'var(--font-display-v2)',
@@ -702,6 +749,65 @@ export default function CaseIntake() {
           onNavigate={setPreviewPhotoIndex}
           onClose={() => setPreviewPhotoIndex(null)}
         />
+      )}
+
+      {/* Edit case details modal — opened from the pencil affordance on the
+          summary card. Reuses CaseForm; modal is the chrome only. */}
+      {showEditDetails && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowEditDetails(false); }}
+        >
+          <div
+            className="v2-surface-elevated page-enter"
+            style={{ padding: '32px', width: '100%', maxWidth: '520px', position: 'relative' }}
+          >
+            <button
+              onClick={() => setShowEditDetails(false)}
+              aria-label="Close edit"
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                background: 'transparent',
+                border: 0,
+                color: 'var(--bone-dim)',
+                cursor: 'pointer',
+                padding: 6,
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <X size={16} />
+            </button>
+            <h3
+              style={{
+                fontFamily: 'var(--font-display-v2)',
+                fontWeight: 500,
+                fontSize: '1.5rem',
+                letterSpacing: '-0.015em',
+                fontVariationSettings: '"opsz" 80',
+                color: 'var(--bone)',
+                marginBottom: 24,
+              }}
+            >
+              Edit case details
+            </h3>
+            <CaseForm
+              defaultOpen
+              initial={{
+                caseType: activeCase.caseType,
+                reportType: activeCase.reportType,
+                jurisdiction: activeCase.jurisdiction,
+                opposingExpert: activeCase.opposingExpert,
+                deadline: activeCase.deadline,
+              }}
+              onSave={handleSaveDetails}
+            />
+          </div>
+        </div>
       )}
 
       {/* Pattern C checkpoint */}
