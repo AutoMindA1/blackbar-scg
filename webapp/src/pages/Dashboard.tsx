@@ -1,24 +1,89 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Briefcase, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useCaseStore } from '../stores/caseStore';
-import { useAuthStore } from '../stores/authStore';
-import BearMark from '../components/shared/BearMark';
 import EmptyState from '../components/shared/EmptyState';
 import SkeletonLoader from '../components/shared/SkeletonLoader';
+import type { CaseSummary } from '../lib/api';
 
-const STAGE_COLORS: Record<string, string> = {
-  intake: 'bg-[var(--color-stage-intake)]/20 text-[var(--color-stage-intake)]',
-  research: 'bg-[var(--color-stage-research)]/20 text-[var(--color-stage-research)]',
-  drafting: 'bg-[var(--color-stage-drafting)]/20 text-[var(--color-stage-drafting)]',
-  qa: 'bg-[var(--color-stage-qa)]/20 text-[var(--color-stage-qa)]',
-  export: 'bg-[var(--color-stage-export)]/20 text-[var(--color-stage-export)]',
-  complete: 'bg-[var(--color-success)]/20 text-[var(--color-success)]',
+/**
+ * Dashboard — UI_REFERENCE_v1.html §04. Dense table, not a card grid; one
+ * amber CTA only ("+ New case"); stage pill tells Lane where each case is
+ * without a click-in. Hover reveals the row.
+ *
+ * §04 explicitly omits the v1 hero+bear header and the 4-stat row; both
+ * removed in this migration. The greeting / "good morning, Lane" line is
+ * also gone — Lane sees the dense table on entry.
+ */
+
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return '';
+  const diff = Date.now() - then;
+  const m = Math.max(0, Math.floor(diff / 60000));
+  if (m < 1) return 'updated just now';
+  if (m < 60) return `updated ${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `updated ${h}h ago`;
+  if (h < 48) return 'updated yesterday';
+  const d = Math.floor(h / 24);
+  return `updated ${d}d ago`;
+}
+
+interface PillSpec {
+  className: string;
+  label: string;
+  pulsingDot: boolean;
+}
+
+function stagePill(stage: string): PillSpec {
+  if (stage === 'complete') return { className: 'v2-pill v2-pill-complete', label: 'Complete', pulsingDot: false };
+  if (stage === 'intake') return { className: 'v2-pill v2-pill-pending', label: 'Intake', pulsingDot: false };
+  const labels: Record<string, string> = {
+    research: 'Research',
+    drafting: 'Drafting',
+    qa: 'QA',
+    export: 'Export',
+  };
+  return { className: 'v2-pill v2-pill-running', label: labels[stage] ?? stage, pulsingDot: true };
+}
+
+function summarizeRow(c: CaseSummary): string {
+  const parts: string[] = [];
+  if (c.caseType) parts.push(c.caseType.replace(/_/g, ' '));
+  if (c.reportType) parts.push(`${c.reportType} report`);
+  parts.push(`${c.documentCount} document${c.documentCount === 1 ? '' : 's'}`);
+  return parts.join(' · ');
+}
+
+const titleStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-display-v2)',
+  fontWeight: 500,
+  fontSize: '1.0625rem',
+  letterSpacing: '-0.015em',
+  fontVariationSettings: '"opsz" 60',
+  color: 'var(--bone)',
+};
+
+const subStyle: React.CSSProperties = {
+  fontSize: '0.8125rem',
+  color: 'var(--bone-muted)',
+  marginTop: '3px',
+};
+
+const inputStyle: React.CSSProperties = {
+  background: 'var(--noir-0)',
+  border: '1px solid var(--noir-3)',
+  borderRadius: 'var(--radius-md)',
+  padding: '10px 14px',
+  color: 'var(--bone)',
+  fontFamily: 'var(--font-ui-v2)',
+  fontSize: '0.9375rem',
+  width: '100%',
 };
 
 export default function Dashboard() {
   const { cases, loading, error, fetchCases, createCase } = useCaseStore();
-  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const [showNewCase, setShowNewCase] = useState(false);
   const [newCaseName, setNewCaseName] = useState('');
@@ -38,155 +103,238 @@ export default function Dashboard() {
 
   const handleCreateCase = async () => {
     if (!newCaseName.trim()) return;
-    setCreateError(''); setCreating(true);
+    setCreateError('');
+    setCreating(true);
     try {
-      const c = await createCase({ name: newCaseName, caseType: newCaseType, reportType: newReportType, jurisdiction: 'Clark County, Nevada' });
-      setShowNewCase(false); setNewCaseName('');
+      const c = await createCase({
+        name: newCaseName,
+        caseType: newCaseType,
+        reportType: newReportType,
+        jurisdiction: 'Clark County, Nevada',
+      });
+      setShowNewCase(false);
+      setNewCaseName('');
       navigate(`/cases/${c.id}/intake`);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to create case');
-    } finally { setCreating(false); }
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const activeCases = cases.filter((c) => c.stage !== 'complete');
-  const completedCases = cases.filter((c) => c.stage === 'complete');
-  const pendingReview = cases.filter((c) => ['qa', 'export'].includes(c.stage));
-
-  const now = new Date();
-  const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening';
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const activeCount = cases.filter((c) => c.stage !== 'complete').length;
 
   return (
     <div className="page-enter">
-      {/* Hero header with bear crop */}
-      <div className="relative overflow-hidden rounded-2xl mb-8 h-48">
-        <BearMark variant="hero" size="full" className="absolute inset-0" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg-primary)] via-[var(--color-bg-primary)]/80 to-transparent" />
-        <div className="absolute bottom-6 left-8 right-8 flex items-end justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-semibold text-[var(--color-text-primary)]">
-              {greeting}, {user?.name?.split(' ')[0] || 'Lane'}.
-            </h1>
-            <p className="text-sm text-[var(--color-text-secondary)] mt-1">{dateStr}</p>
-          </div>
-          <button onClick={() => setShowNewCase(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-hover)] text-white font-semibold rounded-xl transition-colors text-sm">
-            <Plus className="w-4 h-4" /> New Case
-          </button>
+      {/* §04 header — "Active matters · N" + sort meta + the only amber CTA */}
+      <header className="flex items-baseline justify-between mb-6">
+        <div>
+          <h1
+            style={{
+              fontFamily: 'var(--font-display-v2)',
+              fontWeight: 500,
+              fontSize: '1.75rem',
+              letterSpacing: '-0.02em',
+              fontVariationSettings: '"opsz" 80',
+              color: 'var(--bone)',
+              margin: 0,
+            }}
+          >
+            Active matters · {activeCount}
+          </h1>
+          <p className="v2-micro" style={{ color: 'var(--bone-muted)', marginTop: '4px' }}>
+            Sorted by last activity
+          </p>
         </div>
-      </div>
+        <button onClick={() => setShowNewCase(true)} className="v2-btn v2-btn-primary">
+          + New case
+        </button>
+      </header>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: 'Active Cases', value: activeCases.length, icon: Briefcase, color: 'var(--color-accent-primary)' },
-          { label: 'Completed', value: completedCases.length, icon: CheckCircle, color: 'var(--color-success)' },
-          { label: 'Avg Turnaround', value: '2.4d', icon: Clock, color: 'var(--color-accent-secondary)' },
-          { label: 'Pending Review', value: pendingReview.length, icon: AlertCircle, color: 'var(--color-warning)' },
-        ].map((stat) => (
-          <div key={stat.label} className="glass rounded-xl p-5 card-hover relative overflow-hidden">
-            <BearMark variant="watermark" opacity={0.02} />
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{stat.label}</span>
-                <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
-              </div>
-              <p className="text-3xl font-bold text-[var(--color-text-primary)]">{stat.value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Case List */}
-      <div className="glass rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-[var(--color-border)]">
-          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">All Cases</h3>
+      {/* Body: skeleton / error / empty / dense list */}
+      {loading ? (
+        <div className="v2-surface" style={{ padding: '8px' }}>
+          <SkeletonLoader type="list" count={3} />
         </div>
-        {loading ? (
-          <div className="p-6"><SkeletonLoader type="list" count={3} /></div>
-        ) : error ? (
-          <div className="p-8 text-center">
-            <p className="text-[var(--color-error)] text-sm mb-2">Failed to load cases</p>
-            <p className="text-[var(--color-text-muted)] text-xs mb-3">{error}</p>
-            <button onClick={() => fetchCases()} className="text-xs text-[var(--color-accent-primary)] hover:underline">Retry</button>
-          </div>
-        ) : cases.length === 0 ? (
+      ) : error ? (
+        <div className="v2-surface" style={{ padding: '32px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--verdict-red)', fontSize: '0.9375rem', marginBottom: '8px' }}>
+            Failed to load cases
+          </p>
+          <p style={{ color: 'var(--bone-muted)', fontSize: '0.8125rem', marginBottom: '16px' }}>
+            {error}
+          </p>
+          <button onClick={() => fetchCases()} className="v2-btn v2-btn-ghost">Retry</button>
+        </div>
+      ) : cases.length === 0 ? (
+        <div className="v2-surface">
           <EmptyState
-            title="No cases yet"
-            description="Create your first case to get started with AI-assisted report drafting."
-            actionLabel="New Case"
+            title="Every case starts with one PDF."
+            description="No matters yet. Create the first one and the Intake agent picks it up the moment you drop a file."
+            actionLabel="Start your first case"
             onAction={() => setShowNewCase(true)}
           />
-        ) : (
-          <div className="divide-y divide-[var(--color-border)]">
-            {cases.map((c) => (
-              <button key={c.id} onClick={() => navigate(`/cases/${c.id}/${c.stage === 'complete' ? 'export' : c.stage}`)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--color-bg-elevated)] transition-colors text-left">
-                <div className="flex-1">
-                  <p className="text-sm text-[var(--color-text-primary)] font-medium">{c.name}</p>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                    {c.jurisdiction} {c.opposingExpert ? `\u2014 ${c.opposingExpert}` : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-[var(--color-text-muted)] font-mono">{c.documentCount} docs</span>
-                  <span className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full ${STAGE_COLORS[c.stage] || 'bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]'}`}>
-                    {c.stage}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* New Case Modal */}
-      {showNewCase && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="glass-elevated rounded-2xl p-6 w-full max-w-md page-enter relative overflow-hidden">
-            <BearMark variant="watermark" opacity={0.04} />
-            <div className="relative z-10">
-              <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4">New Case</h3>
-              <div className="space-y-3">
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1px',
+            background: 'var(--noir-3)',
+            border: '1px solid var(--noir-3)',
+            borderRadius: 'var(--radius-lg)',
+            overflow: 'hidden',
+          }}
+        >
+          {cases.map((c) => {
+            const pill = stagePill(c.stage);
+            return (
+              <button
+                key={c.id}
+                onClick={() => navigate(`/cases/${c.id}/${c.stage === 'complete' ? 'export' : c.stage}`)}
+                className="v2-focus-ring"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto auto auto',
+                  gap: '32px',
+                  alignItems: 'center',
+                  background: 'var(--noir-1)',
+                  padding: '20px 24px',
+                  border: 0,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  color: 'var(--bone)',
+                  transition: 'background var(--duration-base) var(--ease-forensic)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--noir-2)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--noir-1)'; }}
+              >
                 <div>
-                  <label className="block text-xs text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Case Name</label>
-                  <input value={newCaseName} onChange={(e) => setNewCaseName(e.target.value)}
-                    placeholder="[Defendant] adv [Plaintiff]"
-                    className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl px-3 py-2.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)]"
-                    autoFocus />
+                  <div style={titleStyle}>{c.name}</div>
+                  <div style={subStyle}>{summarizeRow(c)}</div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Case Type</label>
-                    <select value={newCaseType} onChange={(e) => setNewCaseType(e.target.value)}
-                      className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl px-3 py-2.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)]">
-                      <option value="slip_fall">Slip & Fall</option>
-                      <option value="trip_fall">Trip & Fall</option>
-                      <option value="stair">Stair Incident</option>
-                      <option value="walkway">Walkway Hazard</option>
-                      <option value="construction">Construction Defect</option>
-                      <option value="surveillance">Surveillance Analysis</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Report Type</label>
-                    <select value={newReportType} onChange={(e) => setNewReportType(e.target.value)}
-                      className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl px-3 py-2.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)]">
-                      <option value="initial">Initial Report</option>
-                      <option value="rebuttal">Rebuttal Report</option>
-                      <option value="supplemental">Supplemental Report</option>
-                    </select>
-                  </div>
+                <span className={pill.className}>
+                  {pill.pulsingDot && (
+                    <span
+                      className="animate-pulse"
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: 'currentColor',
+                      }}
+                      aria-hidden
+                    />
+                  )}
+                  {pill.label}
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono-v2)',
+                    fontSize: '0.75rem',
+                    color: 'var(--bone-dim)',
+                  }}
+                >
+                  {relativeTime(c.lastActivity)}
+                </span>
+                <ChevronRight size={18} style={{ color: 'var(--bone-dim)' }} />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* New case modal — restyled to v2-surface-elevated */}
+      {showNewCase && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowNewCase(false); }}
+        >
+          <div
+            className="v2-surface-elevated page-enter"
+            style={{ padding: '32px', width: '100%', maxWidth: '440px' }}
+          >
+            <h3
+              style={{
+                fontFamily: 'var(--font-display-v2)',
+                fontWeight: 500,
+                fontSize: '1.5rem',
+                letterSpacing: '-0.015em',
+                fontVariationSettings: '"opsz" 80',
+                color: 'var(--bone)',
+                marginBottom: '24px',
+              }}
+            >
+              New case
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="v2-micro" style={{ display: 'block', marginBottom: '8px', color: 'var(--bone-muted)' }}>
+                  Case name
+                </label>
+                <input
+                  value={newCaseName}
+                  onChange={(e) => setNewCaseName(e.target.value)}
+                  placeholder="[Defendant] adv [Plaintiff]"
+                  style={inputStyle}
+                  autoFocus
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="v2-micro" style={{ display: 'block', marginBottom: '8px', color: 'var(--bone-muted)' }}>
+                    Matter type
+                  </label>
+                  <select
+                    value={newCaseType}
+                    onChange={(e) => setNewCaseType(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="slip_fall">Slip & fall</option>
+                    <option value="trip_fall">Trip & fall</option>
+                    <option value="stair">Stair incident</option>
+                    <option value="walkway">Walkway hazard</option>
+                    <option value="construction">Construction defect</option>
+                    <option value="surveillance">Surveillance analysis</option>
+                  </select>
                 </div>
-                {createError && <p className="text-[var(--color-error)] text-xs">{createError}</p>}
-                <div className="flex gap-2 pt-2">
-                  <button onClick={handleCreateCase} disabled={creating || !newCaseName.trim()}
-                    className="flex-1 bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-semibold text-sm transition-colors">
-                    {creating ? 'Creating...' : 'Create Case'}
-                  </button>
-                  <button onClick={() => setShowNewCase(false)}
-                    className="px-4 py-2.5 bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] rounded-xl text-sm border border-[var(--color-border)]">Cancel</button>
+                <div>
+                  <label className="v2-micro" style={{ display: 'block', marginBottom: '8px', color: 'var(--bone-muted)' }}>
+                    Report type
+                  </label>
+                  <select
+                    value={newReportType}
+                    onChange={(e) => setNewReportType(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="initial">Initial</option>
+                    <option value="rebuttal">Rebuttal</option>
+                    <option value="supplemental">Supplemental</option>
+                  </select>
                 </div>
+              </div>
+              {createError && (
+                <p style={{ color: 'var(--verdict-red)', fontSize: '0.75rem' }}>{createError}</p>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleCreateCase}
+                  disabled={creating || !newCaseName.trim()}
+                  className="v2-btn v2-btn-primary"
+                  style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    opacity: (creating || !newCaseName.trim()) ? 0.5 : 1,
+                    cursor: (creating || !newCaseName.trim()) ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {creating ? 'Creating…' : 'Create case'}
+                </button>
+                <button onClick={() => setShowNewCase(false)} className="v2-btn v2-btn-ghost">
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
