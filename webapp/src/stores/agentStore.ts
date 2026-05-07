@@ -26,6 +26,7 @@ interface AgentState {
   clearLogs: () => void;
   clearAutoAdvanceEvent: () => void;
   clearHITLEvent: () => void;
+  resetStatus: () => void;
 }
 
 export const useAgentStore = create<AgentState>((set, get) => ({
@@ -83,4 +84,9 @@ export const useAgentStore = create<AgentState>((set, get) => ({
   clearLogs: () => set({ logs: [], status: 'idle', autoAdvanceEvent: null, hitlEvent: null }),
   clearAutoAdvanceEvent: () => set({ autoAdvanceEvent: null }),
   clearHITLEvent: () => set({ hitlEvent: null }),
+  // Reset only `status` without wiping logs/events. Used by stage pages on
+  // mount to discard stale 'complete' carried over from a prior stage's run
+  // (e.g., Intake → /research auto-advance leaves status='complete', which
+  // makes ContextualActionButton render "Research Complete" with no button).
+  resetStatus: () => set({ status: 'idle' }),
 }));

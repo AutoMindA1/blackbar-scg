@@ -15,6 +15,7 @@ import PatternCToast from '../components/shared/PatternCToast';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
 import { api, parseDraftingFromMetadata } from '../lib/api';
+import type { SSEMessage } from '../lib/api';
 
 function capitalize(s: string): string {
   return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
@@ -45,12 +46,40 @@ export default function CaseDrafting() {
     hitlEvent,
     clearAutoAdvanceEvent,
     clearHITLEvent,
+    resetStatus,
   } = useAgentStore();
   const [content, setContent] = useState('');
   const [saved, setSaved] = useState(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+  const autoTriggered = useRef(false);
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
+
+  // Discard stale 'complete' status carried over from prior stage (Research
+  // auto-advance leaves status='complete', which would render "Drafting
+  // Complete" green pill before drafting actually starts).
+  useEffect(() => { resetStatus(); }, [resetStatus]);
+
+  // Auto-fire Drafting when the user lands on /drafting and the case is in
+  // the drafting stage with no draft content yet. 1500ms grace for SSE
+  // replay before deciding. Matches /ship-v1 PR 7 spec.
+  useEffect(() => {
+    if (autoTriggered.current) return;
+    if (!id) return;
+    const timer = setTimeout(() => {
+      if (autoTriggered.current) return;
+      const ag = useAgentStore.getState();
+      const ac = useCaseStore.getState().activeCase;
+      if (!ac || ac.stage !== 'drafting') return;
+      if (ag.status === 'running') return;
+      if (ag.hitlEvent) return;
+      // Drafting emits draft_content / section events rather than findings.
+      if (ag.logs.some((l: SSEMessage) => l.type === 'draft_content' || l.type === 'section_complete')) return;
+      autoTriggered.current = true;
+      void ag.triggerAgent(id, 'drafting');
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [id]);
   // Initial content sync — sets state from prop on first load. Suppression
   // tracked separately from Pattern C work; same lint-rule edge case as
   // CaseForm.tsx (sets state inside an effect synced to prop change).

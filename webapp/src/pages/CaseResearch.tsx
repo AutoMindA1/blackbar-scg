@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Scale } from 'lucide-react';
 import Header from '../components/layout/Header';
@@ -14,6 +14,7 @@ import type { Citation } from '../components/shared/CitationCard';
 import { useCaseStore } from '../stores/caseStore';
 import { useAgentStore } from '../stores/agentStore';
 import { api, parseResearchFromMetadata } from '../lib/api';
+import type { SSEMessage } from '../lib/api';
 
 function capitalize(s: string): string {
   return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
@@ -34,9 +35,37 @@ export default function CaseResearch() {
     hitlEvent,
     clearAutoAdvanceEvent,
     clearHITLEvent,
+    resetStatus,
   } = useAgentStore();
+  const autoTriggered = useRef(false);
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
+
+  // Discard stale 'complete' status carried over from the prior stage's run.
+  // agentStore.status is global; without this, /research after Intake auto-
+  // advance shows "Research Complete" instead of the "Run Research" button.
+  useEffect(() => { resetStatus(); }, [resetStatus]);
+
+  // Auto-fire Research when the user lands on /research and the case is in
+  // the research stage with no findings yet. 1500ms grace lets SSE replay
+  // any prior research run before we decide. Matches /ship-v1 PR 7 spec
+  // ("auto-advance through Research/Drafting (Pattern C)").
+  useEffect(() => {
+    if (autoTriggered.current) return;
+    if (!id) return;
+    const timer = setTimeout(() => {
+      if (autoTriggered.current) return;
+      const ag = useAgentStore.getState();
+      const ac = useCaseStore.getState().activeCase;
+      if (!ac || ac.stage !== 'research') return;
+      if (ag.status === 'running') return;
+      if (ag.hitlEvent) return;
+      if (ag.logs.some((l: SSEMessage) => l.type === 'finding')) return;
+      autoTriggered.current = true;
+      void ag.triggerAgent(id, 'research');
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [id]);
 
   // Pattern C — auto-advance toast + programmatic navigate after 4s.
   useEffect(() => {
