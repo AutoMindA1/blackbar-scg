@@ -40,3 +40,22 @@ First PR 0 attempt surfaced a mismatch: local `.env` showed `GDMU…` while Cale
 - [ ] Rotate `DATABASE_URL` via Railway CLI (Caleb, this evening)
 - [ ] Force in-app password change for Lane / Mariz / Caleb on next login (mitigation for `SEED_PASSWORD` leak)
 - [ ] Audit any other `*.save` / `*.bak` patterns in repo and Mac home
+
+## PR 0 re-verification — 2026-05-07
+
+`/ship-v1` re-ran credential verification 3 days post-rotation. All checks pass.
+
+| Check | Result |
+|---|---|
+| `.env.save` absent at root + `webapp/` | pass |
+| Git history clean for `.env.save` | pass |
+| Local `.env` `ANTHROPIC_API_KEY` first 4 = `YAWG` | pass (Caleb confirmed in chat) |
+| Live Anthropic probe (`claude-haiku-4-5`, `max_tokens: 1`) | HTTP 200 |
+| Production root | HTTP 200, ~285ms |
+| Production `/api/health` | HTTP 200, version `9b7cd38` |
+| Production `/api/auth/me` no token | HTTP 401, `"No token provided"` (JWT middleware loaded) |
+| Branch | `feat/dag-lane-gate-recovery` |
+
+Production boot success implies `DATABASE_URL` and `JWT_SECRET` in Railway env are valid (server connects to DB and signs/verifies tokens). `ANTHROPIC_API_KEY` in Railway env can only be fully verified by an authed agent call against production; deferred to PR 7 smoke test.
+
+Caleb confirmed in chat that `SEED_LANE_PASSWORD` / `SEED_MARIZ_PASSWORD` will not be rotated server-side — Lane and Mariz reset their own passwords through the UI on first login. Force-password-change follow-up from 2026-05-04 satisfied by UAT step at PR 7.
