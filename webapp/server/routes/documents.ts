@@ -72,7 +72,9 @@ const EXT_MIME_MAP: Record<string, string[]> = {
 
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max (reduced from 50MB)
+  // 200MB per file: forensic depositions / expert reports with embedded
+  // exhibits routinely exceed 25MB. Per-case 50-doc cap (below) bounds total.
+  limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (!ALLOWED_EXTENSIONS.has(ext) || !ALLOWED_MIMETYPES.has(file.mimetype)) {
@@ -91,8 +93,8 @@ const upload = multer({
 
 const caseIdParam = z.string().min(1).max(100);
 
-// POST /api/cases/:id/documents — max 10 files per request
-router.post('/:id/documents', upload.array('files', 10), async (req: AuthRequest, res: Response) => {
+// POST /api/cases/:id/documents — max 50 files per request (matches per-case cap)
+router.post('/:id/documents', upload.array('files', 50), async (req: AuthRequest, res: Response) => {
   if (!caseIdParam.safeParse(req.params.id).success) { res.status(400).json({ error: 'Invalid case ID' }); return; }
   const files = req.files as Express.Multer.File[];
   if (!files?.length) { res.status(400).json({ error: 'No files uploaded' }); return; }

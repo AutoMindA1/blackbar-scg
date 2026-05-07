@@ -196,7 +196,11 @@ export default function CaseIntake() {
     if (!id) return;
     setUploading(true);
     try {
-      await api.uploadDocuments(id, files);
+      // Server caps each request at 50; chunk client-side so larger drops succeed.
+      const CHUNK = 50;
+      for (let i = 0; i < files.length; i += CHUNK) {
+        await api.uploadDocuments(id, files.slice(i, i + CHUNK));
+      }
       await fetchCase(id);
     } finally { setUploading(false); }
   }, [id, fetchCase]);
