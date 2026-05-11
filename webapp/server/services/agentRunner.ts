@@ -447,6 +447,17 @@ export async function runAgent(
     // Persist the full response
     await persistLog(caseId, stage, 'complete', completeMessage, completeMetadata);
 
+    // Auto-save Drafting output to the report table so QA voice-check and
+    // Export both have content even when Pattern C skips the manual Save step.
+    if (stage === 'drafting') {
+      const draftHtml = markdownToReportHtml(fullResponse);
+      await prisma.report.upsert({
+        where: { caseId },
+        update: { content: draftHtml, version: { increment: 1 } },
+        create: { caseId, content: draftHtml, version: 1 },
+      });
+    }
+
     // Persist full output for next stage to reference
     await prisma.agentLog.create({
       data: {
@@ -495,7 +506,10 @@ export async function runAgent(
         ...(parsedTyped ? { parsed: parsedTyped } : {}),
       };
 
-      if (pcResult.autoAdvance) {
+      // QA always requires Lane's explicit sign-off — it is the single mandatory
+      // human checkpoint in the pipeline regardless of Pattern C score.
+      const requiresHumanGate = !pcResult.autoAdvance || patternCStage === 'qa';
+      if (!requiresHumanGate) {
         broadcast(broadcastFn, caseId, stage, 'auto_advance',
           `${capitalize(stage)} complete — advancing to next stage`,
           {
@@ -553,6 +567,31 @@ export async function runAgent(
  * intermediate `pending_*_approval` DAG phases since those are routing
  * states, not user-visible stages.
  */
+// Convert the Drafting agent's markdown prose to HTML suitable for the
+// TipTap editor and the export pipeline. Strips the trailing JSON fence and
+// self-audit summary block before converting.
+function markdownToReportHtml(raw: string): string {
+  // Drop everything from the last ```json fence onward (DraftingResult metadata)
+  const jsonFenceIdx = raw.lastIndexOf('```json');
+  const prose = jsonFenceIdx > 0 ? raw.slice(0, jsonFenceIdx) : raw;
+  // Drop the self-audit block (━━━ separator onward)
+  const auditIdx = prose.indexOf('━━━━━━━━━━━━━━━━━');
+  const clean = auditIdx > 0 ? prose.slice(0, auditIdx) : prose;
+
+  return clean
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('## ')) return `<h2>${trimmed.slice(3)}</h2>`;
+      if (trimmed.startsWith('# ')) return `<h1>${trimmed.slice(2)}</h1>`;
+      if (trimmed.startsWith('### ')) return `<h3>${trimmed.slice(4)}</h3>`;
+      return `<p>${trimmed}</p>`;
+    })
+    .filter((line, i, arr) => !(line === '' && arr[i - 1] === ''))
+    .join('\n');
+}
+
 function nextStageOf(stage: 'intake' | 'research' | 'drafting' | 'qa'): string {
   switch (stage) {
     case 'intake': return 'research';

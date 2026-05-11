@@ -163,6 +163,18 @@ export default function CaseIntake() {
     setShowEditDetails(false);
   }, [id, fetchCase]);
 
+  // Prevent browser from navigating to dropped files if the drop misses the
+  // dropzone target. Capture phase catches it before browser default fires.
+  useEffect(() => {
+    const prevent = (e: DragEvent) => { e.preventDefault(); };
+    window.addEventListener('dragover', prevent, true);
+    window.addEventListener('drop', prevent, true);
+    return () => {
+      window.removeEventListener('dragover', prevent, true);
+      window.removeEventListener('drop', prevent, true);
+    };
+  }, []);
+
   // Esc closes the edit-details modal
   useEffect(() => {
     if (!showEditDetails) return;

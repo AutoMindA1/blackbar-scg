@@ -1,4 +1,4 @@
-import { useState, useCallback, useId } from 'react';
+import { useState, useCallback, useId, useEffect } from 'react';
 import { Upload, FileText, Image, Loader2, Eye, X } from 'lucide-react';
 import ImagePreviewModal from './ImagePreviewModal';
 
@@ -38,6 +38,19 @@ export default function FileDropzone({
   const [dragOver, setDragOver] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const inputId = useId();
+
+  // Prevent browser from navigating to a dropped file if the drop misses the
+  // target div. Capture phase on window catches it before the browser default
+  // fires on macOS Chrome/Safari.
+  useEffect(() => {
+    const prevent = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); };
+    window.addEventListener('dragover', prevent, true);
+    window.addEventListener('drop', prevent, true);
+    return () => {
+      window.removeEventListener('dragover', prevent, true);
+      window.removeEventListener('drop', prevent, true);
+    };
+  }, []);
 
   const imageDocuments = documents.filter(
     (d): d is DocLike & { filepath: string } => isImageFile(d.filename) && !!d.filepath,

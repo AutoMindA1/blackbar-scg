@@ -1,5 +1,4 @@
 import { Check, Scale } from 'lucide-react';
-import { useEffectiveAdmin } from '../../stores/adminViewStore';
 
 interface StageNavV2Props {
   currentStage: 'intake' | 'research' | 'drafting' | 'qa' | 'export';
@@ -18,9 +17,6 @@ const stages = [
 ] as const;
 
 export default function StageNavV2({ currentStage, completedStages, agentRunning, onNavigate }: StageNavV2Props) {
-  const isAdmin = useEffectiveAdmin();
-  if (!isAdmin) return null;
-
   return (
     <nav className="flex items-center gap-1 px-4 py-3">
       {stages.map((stage, i) => {

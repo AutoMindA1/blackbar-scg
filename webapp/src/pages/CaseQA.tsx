@@ -20,14 +20,19 @@ export default function CaseQA() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { activeCase, fetchCase } = useCaseStore();
-  const { logs, status, connectSSE, disconnectSSE, triggerAgent, clearLogs } = useAgentStore();
-  const [showCheckpoint, setShowCheckpoint] = useState(false);
+  const {
+    logs, status, connectSSE, disconnectSSE, triggerAgent, clearLogs,
+    resetStatus, hitlEvent, clearHITLEvent,
+  } = useAgentStore();
   const [scorecard, setScorecard] = useState<QAScorecard | null>(null);
   const [scorecardLoaded, setScorecardLoaded] = useState(false);
 
   useEffect(() => { if (id) { fetchCase(id); connectSSE(id); } return () => disconnectSSE(); }, [id, fetchCase, connectSSE, disconnectSSE]);
 
-  // Fetch the latest persisted QA scorecard on mount
+  // Discard stale 'complete' carried over from the prior stage.
+  useEffect(() => { resetStatus(); }, [resetStatus]);
+
+  // Fetch the latest persisted QA scorecard on mount (replay path).
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -37,17 +42,18 @@ export default function CaseQA() {
     return () => { cancelled = true; };
   }, [id]);
 
-  // When the QA agent finishes, refetch the scorecard and surface the checkpoint.
-  // Wrap state updates in the async callback (not top-level effect body) to satisfy
-  // react-hooks/set-state-in-effect — the fetch is the external system sync.
+  // When QA fires hitl_required, refetch the persisted scorecard so the
+  // checkpoint summary has the latest data.
   useEffect(() => {
-    if (status !== 'complete' || !id) return;
+    if (!hitlEvent || !id) return;
     let cancelled = false;
     api.getQAScorecard(id)
-      .then(({ qa }) => { if (!cancelled) { setScorecard(qa); setShowCheckpoint(true); } })
-      .catch(() => { if (!cancelled) setShowCheckpoint(true); });
+      .then(({ qa }) => { if (!cancelled) { setScorecard(qa); setScorecardLoaded(true); } })
+      .catch(() => {});
     return () => { cancelled = true; };
-  }, [status, id]);
+  }, [hitlEvent, id]);
+
+  const showCheckpoint = !!hitlEvent;
 
   // Live update: when a qa_result SSE event arrives, hydrate immediately.
   // Derived value — no setState needed; recalculates on every render when logs change.
@@ -59,7 +65,7 @@ export default function CaseQA() {
   const handleApprove = async () => {
     if (!id) return;
     const { nextStage } = await api.approve(id, 'qa', 'approve');
-    setShowCheckpoint(false);
+    clearHITLEvent();
     navigate(`/cases/${id}/${nextStage}`);
   };
 
@@ -144,8 +150,8 @@ export default function CaseQA() {
             : 'QA agent finished but produced no parseable scorecard. Review the activity feed.'}
           qaScore={hasScorecard ? score : undefined}
           onApprove={handleApprove}
-          onRevise={async (notes) => { clearLogs(); await triggerAgent(id!, 'qa', notes); setShowCheckpoint(false); }}
-          onReject={() => setShowCheckpoint(false)}
+          onRevise={async (notes) => { clearLogs(); clearHITLEvent(); await triggerAgent(id!, 'qa', notes); }}
+          onReject={clearHITLEvent}
         />
       )}
     </div>
